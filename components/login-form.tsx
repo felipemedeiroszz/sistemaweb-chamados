@@ -106,20 +106,4 @@ export default function LoginForm() {
           </Button>
         </form>
 
-        <div className="mt-6 text-xs text-gray-500 space-y-1">
-          <p>
-            <strong>Contas de teste:</strong>
-          </p>
-          <p>Lojas: loja1@empresa.com até loja12@empresa.com</p>
-          <p>Técnicos: manutencao1@empresa.com, eletricista1@empresa.com, etc.</p>
-          <p>
-            Senha para lojas: <strong>123456</strong>
-          </p>
-          <p>
-            Senha para técnicos: <strong>tecnico123</strong>
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+        
