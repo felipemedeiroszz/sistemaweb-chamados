@@ -18,7 +18,7 @@ export default async function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-md w-full space-y-8 p-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">Sistema de Chamados</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Sistema de Chamados Paulista</h2>
           <p className="mt-2 text-sm text-gray-600">Faça login para acessar o sistema</p>
         </div>
         <LoginForm />
