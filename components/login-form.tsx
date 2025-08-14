@@ -105,7 +105,4 @@ export default function LoginForm() {
             )}
           </Button>
         </form>
-        
-        <div className="mt-6 text-xs text-gray-500 space-y-1">
-          <p>
-           
+}
