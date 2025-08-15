@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { LogOut, User, BarChart3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import type { User as UserType } from "@/lib/auth"
 
 interface DashboardHeaderProps {
@@ -27,6 +28,25 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <Image
+                src="/images/atacadao-3b.png"
+                alt="Atacadão 3B"
+                width={80}
+                height={40}
+                className="object-contain"
+              />
+              <Image
+                src="/images/paulista-supermercados.png"
+                alt="Paulista Supermercados"
+                width={80}
+                height={40}
+                className="object-contain"
+              />
+            </div>
+
+            <div className="h-8 w-px bg-gray-300"></div>
+
             <Link href={user.user_type === "loja" ? "/dashboard/loja" : "/dashboard/tecnico"}>
               <h1 className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                 Sistema de Chamados

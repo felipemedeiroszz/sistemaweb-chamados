@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import LoginForm from "@/components/login-form"
+import Image from "next/image"
 
 export default async function LoginPage() {
   const user = await getSession()
@@ -22,6 +23,19 @@ export default async function LoginPage() {
           <p className="mt-2 text-sm text-gray-600">Faça login para acessar o sistema</p>
         </div>
         <LoginForm />
+
+        <div className="flex flex-col items-center space-y-4 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-center space-x-8">
+            <Image src="/images/atacadao-3b.png" alt="Atacadão 3B" width={120} height={60} className="object-contain" />
+            <Image
+              src="/images/paulista-supermercados.png"
+              alt="Paulista Supermercados"
+              width={120}
+              height={60}
+              className="object-contain"
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

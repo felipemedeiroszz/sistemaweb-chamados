@@ -96,3 +96,7 @@ export async function destroySession() {
   const cookieStore = cookies()
   cookieStore.delete("session")
 }
+
+export async function getUserFromRequest(): Promise<User | null> {
+  return await getSession()
+}
