@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { LogOut, User, BarChart3 } from "lucide-react"
+import { LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -52,12 +52,6 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
                 Sistema de Chamados
               </h1>
             </Link>
-            <Link href="/reports">
-              <Button variant="ghost" size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Relatórios
-              </Button>
-            </Link>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -84,3 +78,5 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
     </header>
   )
 }
+
+export { default as DashboardHeader } from "./dashboard-header"
