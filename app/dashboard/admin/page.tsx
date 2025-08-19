@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,12 +13,13 @@ import {
   Calendar, 
   User 
 } from "lucide-react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 
 interface Ticket {
   id: string
   title: string
   description: string
-  status: "pendente" | "em_andamento" | "resolvido"
+  status: "aberto" | "em_andamento" | "aguardando" | "resolvido"
   priority: "baixa" | "media" | "alta"
   created_at: string
   store_number: number
@@ -32,41 +33,61 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("todos")
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const response = await fetch("/api/tickets/all")
-        if (response.ok) {
-          const data = await response.json()
-          setTickets(data.tickets)
-        } else {
-          console.error("Erro ao buscar chamados")
-        }
-      } catch (error) {
-        console.error("Erro na requisição:", error)
-      } finally {
-        setLoading(false)
+  const fetchTickets = useCallback(async () => {
+    try {
+      const response = await fetch("/api/tickets/all")
+      if (response.ok) {
+        const data = await response.json()
+        setTickets(data.tickets)
+      } else {
+        console.error("Erro ao buscar chamados")
       }
+    } catch (error) {
+      console.error("Erro na requisição:", error)
+    } finally {
+      setLoading(false)
     }
-
-    fetchTickets()
   }, [])
 
-  // Filter tickets based on active tab
+  useEffect(() => {
+    fetchTickets()
+  }, [fetchTickets])
+
+  // Realtime: ouvir mudanças na tabela tickets e refazer o fetch
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    const channel = supabase
+      .channel("tickets-admin")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets" },
+        () => {
+          // Refetch ao inserir/atualizar/excluir
+          fetchTickets()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchTickets])
+
+  // Filtrar chamados conforme as abas solicitadas
   const filteredTickets = tickets.filter((ticket) => {
     if (activeTab === "todos") return true
-    if (activeTab === "pendentes") return ticket.status === "pendente"
     if (activeTab === "em_andamento") return ticket.status === "em_andamento"
-    if (activeTab === "resolvidos") return ticket.status === "resolvido"
+    if (activeTab === "aguardando") return ticket.status === "aguardando"
+    if (activeTab === "resolvido") return ticket.status === "resolvido"
     return true
   })
 
   // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    if (status === "pendente") {
+  const StatusBadge = ({ status }: { status: Ticket["status"] }) => {
+    if (status === "aguardando") {
       return (
         <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-          <Clock className="mr-1 h-3 w-3" /> Pendente
+          <Clock className="mr-1 h-3 w-3" /> Aguardando
         </Badge>
       )
     }
@@ -74,6 +95,13 @@ export default function AdminDashboardPage() {
       return (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
           <AlertCircle className="mr-1 h-3 w-3" /> Em Andamento
+        </Badge>
+      )
+    }
+    if (status === "aberto") {
+      return (
+        <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+          <Clock className="mr-1 h-3 w-3" /> Aberto
         </Badge>
       )
     }
@@ -98,9 +126,9 @@ export default function AdminDashboardPage() {
           <Tabs defaultValue="todos" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="todos">Todos</TabsTrigger>
-              <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
               <TabsTrigger value="em_andamento">Em Andamento</TabsTrigger>
-              <TabsTrigger value="resolvidos">Resolvidos</TabsTrigger>
+              <TabsTrigger value="aguardando">Aguardando</TabsTrigger>
+              <TabsTrigger value="resolvido">Resolvido</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab}>
