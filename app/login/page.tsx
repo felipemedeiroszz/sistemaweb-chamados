@@ -1,18 +1,18 @@
-import { getSession } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import LoginForm from "@/components/login-form"
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
+import AdminLoginModal from "@/components/admin-login-modal"
+import LoginForm from "@/components/login-form"
 
-export default async function LoginPage() {
-  const user = await getSession()
+export default function LoginPage() {
+  // Admin login modal state
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
 
-  if (user) {
-    // Redirecionar baseado no tipo de usuário
-    if (user.user_type === "loja") {
-      redirect("/dashboard/loja")
-    } else {
-      redirect("/dashboard/tecnico")
-    }
+  // Handle logo click
+  const handlePaulistaLogoClick = () => {
+    setIsAdminModalOpen(true)
   }
 
   return (
@@ -32,11 +32,15 @@ export default async function LoginPage() {
               alt="Paulista Supermercados"
               width={120}
               height={60}
-              className="object-contain"
+              className="object-contain cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handlePaulistaLogoClick}
             />
           </div>
         </div>
       </div>
+      
+      {/* Admin Login Modal */}
+      <AdminLoginModal isOpen={isAdminModalOpen} onClose={() => setIsAdminModalOpen(false)} />
     </div>
   )
 }

@@ -21,11 +21,31 @@ export async function middleware(request: NextRequest) {
 
   // Verificar permissões baseadas no tipo de usuário
   if (pathname.startsWith("/dashboard/loja") && user.user_type !== "loja") {
-    return NextResponse.redirect(new URL("/dashboard/tecnico", request.url))
+    // Redirecionar para a dashboard apropriada baseada no tipo de usuário
+    if (user.user_type === "admin") {
+      return NextResponse.redirect(new URL("/dashboard/admin", request.url))
+    } else {
+      return NextResponse.redirect(new URL("/dashboard/tecnico", request.url))
+    }
   }
 
   if (pathname.startsWith("/dashboard/tecnico") && user.user_type !== "tecnico") {
-    return NextResponse.redirect(new URL("/dashboard/loja", request.url))
+    // Redirecionar para a dashboard apropriada baseada no tipo de usuário
+    if (user.user_type === "admin") {
+      return NextResponse.redirect(new URL("/dashboard/admin", request.url))
+    } else {
+      return NextResponse.redirect(new URL("/dashboard/loja", request.url))
+    }
+  }
+  
+  // Proteger rotas de admin
+  if (pathname.startsWith("/dashboard/admin") && user.user_type !== "admin") {
+    // Redirecionar para a dashboard apropriada baseada no tipo de usuário
+    if (user.user_type === "loja") {
+      return NextResponse.redirect(new URL("/dashboard/loja", request.url))
+    } else {
+      return NextResponse.redirect(new URL("/dashboard/tecnico", request.url))
+    }
   }
 
   return NextResponse.next()

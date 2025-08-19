@@ -8,10 +8,11 @@ import Image from "next/image"
 import type { User as UserType } from "@/lib/auth"
 
 interface DashboardHeaderProps {
-  user: UserType
+  user?: UserType
+  userType?: string
 }
 
-export default function DashboardHeader({ user }: DashboardHeaderProps) {
+export default function DashboardHeader({ user, userType }: DashboardHeaderProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -47,7 +48,9 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
 
             <div className="h-8 w-px bg-gray-300"></div>
 
-            <Link href={user.user_type === "loja" ? "/dashboard/loja" : "/dashboard/tecnico"}>
+            <Link href={user?.user_type === "loja" ? "/dashboard/loja" : 
+                   user?.user_type === "tecnico" ? "/dashboard/tecnico" : 
+                   userType === "admin" ? "/dashboard/admin" : "/"}>
               <h1 className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                 Sistema de Chamados
               </h1>
@@ -57,14 +60,23 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <User className="h-4 w-4" />
-              <span>{user.name}</span>
-              {user.user_type === "loja" && user.store_number && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                  Loja {user.store_number}
-                </span>
-              )}
-              {user.user_type === "tecnico" && user.speciality && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">{user.speciality}</span>
+              {user ? (
+                <>
+                  <span>{user.name}</span>
+                  {user.user_type === "loja" && user.store_number && (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                      Loja {user.store_number}
+                    </span>
+                  )}
+                  {user.user_type === "tecnico" && user.speciality && (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">{user.speciality}</span>
+                  )}
+                </>
+              ) : userType === "admin" && (
+                <>
+                  <span>Administrador</span>
+                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">Admin</span>
+                </>
               )}
             </div>
 
