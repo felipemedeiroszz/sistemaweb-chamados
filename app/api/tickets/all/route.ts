@@ -17,12 +17,13 @@ export async function GET() {
     const supabase = createServerClient()
     
     // Get all tickets with store and technician information
+    // Use explicit column-based relationship syntax to avoid relying on constraint names
     const { data: tickets, error } = await supabase
       .from("tickets")
       .select(`
         *,
-        store:users!tickets_store_id_fkey(name, store_number),
-        technician:users!tickets_assigned_to_fkey(name)
+        store:users!store_id(name, store_number),
+        technician:users!assigned_technician_id(name)
       `)
       .order("created_at", { ascending: false })
     
@@ -35,7 +36,7 @@ export async function GET() {
     }
 
     // Format tickets for frontend
-    const formattedTickets = tickets.map(ticket => ({
+    const formattedTickets = tickets.map((ticket: any) => ({
       id: ticket.id,
       title: ticket.title,
       description: ticket.description,
@@ -44,8 +45,8 @@ export async function GET() {
       created_at: ticket.created_at,
       store_number: ticket.store?.store_number || 0,
       store_name: ticket.store?.name || "Desconhecida",
-      assigned_to: ticket.assigned_to,
-      technician_name: ticket.technician?.name || null
+      assigned_to: ticket.assigned_technician_id || null,
+      technician_name: ticket.technician?.name || null,
     }))
 
     return NextResponse.json({ tickets: formattedTickets })
