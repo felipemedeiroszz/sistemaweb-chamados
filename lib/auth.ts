@@ -9,7 +9,7 @@ export interface User {
   id: string
   email: string
   name: string
-  user_type: "loja" | "tecnico"
+  user_type: "loja" | "tecnico" | "administrador"
   store_number?: number
   speciality?: string
 }
