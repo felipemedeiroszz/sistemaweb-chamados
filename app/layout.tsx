@@ -5,7 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "chamados",
+  title: "Reta chamados",
   description: "Sistema de chamados para lojas e técnicos",
   generator: "v0.app",
   icons: {
