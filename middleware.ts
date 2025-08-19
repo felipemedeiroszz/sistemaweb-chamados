@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ["/login", "/api/auth/login"]
+  const publicRoutes = ["/login", "/api/auth/login", "/api/auth/admin-login", "/api/auth/check-session"]
 
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next()
@@ -52,5 +52,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // Não aplicar middleware em rotas de API e assets estáticos
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 }
