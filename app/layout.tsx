@@ -1,4 +1,4 @@
-import type React from "react"
+// Note: Avoid importing React types here due to missing React type declarations in this project setup.
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
@@ -8,12 +8,17 @@ export const metadata: Metadata = {
   title: "chamados",
   description: "Sistema de chamados para lojas e técnicos",
   generator: "v0.app",
+  icons: {
+    icon: [
+      { url: "/images/icon.png", type: "image/png" },
+    ],
+  },
 }
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: any
 }>) {
   return (
     <html lang="en">
