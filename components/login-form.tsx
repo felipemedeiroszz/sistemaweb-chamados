@@ -37,8 +37,6 @@ export default function LoginForm() {
         // Redirecionar baseado no tipo de usuário
         if (data.user.user_type === "loja") {
           router.push("/dashboard/loja")
-        } else if (data.user.user_type === "administrador") {
-          router.push("/dashboard/admin")
         } else {
           router.push("/dashboard/tecnico")
         }

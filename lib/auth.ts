@@ -9,7 +9,7 @@ export interface User {
   id: string
   email: string
   name: string
-  user_type: "loja" | "tecnico" | "administrador"
+  user_type: "loja" | "tecnico"
   store_number?: number
   speciality?: string
 }
@@ -95,8 +95,4 @@ export async function getSession(): Promise<User | null> {
 export async function destroySession() {
   const cookieStore = cookies()
   cookieStore.delete("session")
-}
-
-export async function getUser(): Promise<User | null> {
-  return await getSession()
 }

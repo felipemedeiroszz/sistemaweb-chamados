@@ -11,8 +11,6 @@ export default async function HomePage() {
   // Redirecionar baseado no tipo de usuário
   if (user.user_type === "loja") {
     redirect("/dashboard/loja")
-  } else if (user.user_type === "administrador") {
-    redirect("/dashboard/admin")
   } else {
     redirect("/dashboard/tecnico")
   }

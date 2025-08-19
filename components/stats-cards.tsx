@@ -66,5 +66,3 @@ export default function StatsCards({ stats, labels }: StatsCardsProps) {
     </div>
   )
 }
-
-export { StatsCards }

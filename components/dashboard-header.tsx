@@ -78,5 +78,3 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
     </header>
   )
 }
-
-export { default as DashboardHeader } from "./dashboard-header"

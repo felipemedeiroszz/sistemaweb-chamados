@@ -21,24 +21,11 @@ export async function middleware(request: NextRequest) {
 
   // Verificar permissões baseadas no tipo de usuário
   if (pathname.startsWith("/dashboard/loja") && user.user_type !== "loja") {
-    if (user.user_type === "administrador") {
-      return NextResponse.redirect(new URL("/dashboard/admin", request.url))
-    }
     return NextResponse.redirect(new URL("/dashboard/tecnico", request.url))
   }
 
   if (pathname.startsWith("/dashboard/tecnico") && user.user_type !== "tecnico") {
-    if (user.user_type === "administrador") {
-      return NextResponse.redirect(new URL("/dashboard/admin", request.url))
-    }
     return NextResponse.redirect(new URL("/dashboard/loja", request.url))
-  }
-  
-  if (pathname.startsWith("/dashboard/admin") && user.user_type !== "administrador") {
-    if (user.user_type === "loja") {
-      return NextResponse.redirect(new URL("/dashboard/loja", request.url))
-    }
-    return NextResponse.redirect(new URL("/dashboard/tecnico", request.url))
   }
 
   return NextResponse.next()
