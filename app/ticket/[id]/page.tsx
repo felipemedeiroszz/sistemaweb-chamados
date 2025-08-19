@@ -20,8 +20,8 @@ export default async function TicketPage({ params }: { params: { id: string } })
     .from("tickets")
     .select(`
       *,
-      store:store_id(name, store_number, email),
-      assigned_technician:assigned_technician_id(name, speciality, email)
+      store:users!store_id(name, store_number, email),
+      assigned_technician:users!assigned_technician_id(name, speciality, email)
     `)
     .eq("id", params.id)
     .single()
@@ -32,6 +32,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
 
   // Verificar permissões
   const canView =
+    user.user_type === "admin" ||
     (user.user_type === "loja" && ticket.store_id === user.id) ||
     (user.user_type === "tecnico" &&
       (ticket.assigned_technician_id === user.id || ticket.service_type === user.speciality))

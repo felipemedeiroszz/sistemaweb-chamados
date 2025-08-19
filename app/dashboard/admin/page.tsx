@@ -1,16 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  CheckCircle2, 
+  CheckCircle, 
   Clock, 
   AlertCircle, 
-  Building2, 
-  Calendar, 
   User 
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
@@ -74,7 +73,7 @@ export default function AdminDashboardPage() {
   }, [fetchTickets])
 
   // Filtrar chamados conforme as abas solicitadas
-  const filteredTickets = tickets.filter((ticket) => {
+  const filteredTickets = tickets.filter((ticket: Ticket) => {
     if (activeTab === "todos") return true
     if (activeTab === "em_andamento") return ticket.status === "em_andamento"
     if (activeTab === "aguardando") return ticket.status === "aguardando"
@@ -107,7 +106,7 @@ export default function AdminDashboardPage() {
     }
     return (
       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-        <CheckCircle2 className="mr-1 h-3 w-3" /> Resolvido
+        <CheckCircle className="mr-1 h-3 w-3" /> Resolvido
       </Badge>
     )
   }
@@ -140,7 +139,7 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredTickets.map((ticket) => (
+                  {filteredTickets.map((ticket: Ticket) => (
                     <Card key={ticket.id} className="overflow-hidden">
                       <div className="p-4 border-b border-gray-100">
                         <div className="flex items-center justify-between">
@@ -156,14 +155,12 @@ export default function AdminDashboardPage() {
                       <CardContent className="p-4 bg-gray-50">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div className="flex items-center">
-                            <Building2 className="mr-2 h-4 w-4 text-gray-500" />
-                            <span>Loja: {ticket.store_name} (#{ticket.store_number})</span>
+                            <span className="mr-2 text-gray-500">Loja</span>
+                            <span>: {ticket.store_name} (#{ticket.store_number})</span>
                           </div>
                           <div className="flex items-center">
-                            <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-                            <span>
-                              {new Date(ticket.created_at).toLocaleDateString("pt-BR")}
-                            </span>
+                            <span className="mr-2 text-gray-500">Criado</span>
+                            <span>{new Date(ticket.created_at).toLocaleDateString("pt-BR")}</span>
                           </div>
                           <div className="flex items-center">
                             <User className="mr-2 h-4 w-4 text-gray-500" />
