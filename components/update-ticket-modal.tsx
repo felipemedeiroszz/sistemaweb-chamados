@@ -122,7 +122,17 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
           {status === "aguardando" && expectedResolutionAt && (
             <div className="space-y-1 text-sm text-muted-foreground">
               <div>
-                Prazo selecionado: {new Date(expectedResolutionAt).toLocaleString()}
+                Prazo selecionado: {
+                  new Intl.DateTimeFormat("pt-BR", {
+                    timeZone: "America/Sao_Paulo",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  }).format(new Date(expectedResolutionAt))
+                }
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setDeadlineModalOpen(true)}>
                 Alterar prazo

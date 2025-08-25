@@ -58,6 +58,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Erro ao atualizar chamado" }, { status: 500 })
     }
 
+    // Preparar comentário amigável com data/hora BR quando aplicável
+    let historyComment = comment || `Status alterado para ${status}`
+    if (status === "aguardando" && expected_resolution_at) {
+      const date = new Date(expected_resolution_at)
+      const formattedBR = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(date)
+      historyComment = comment || `Status alterado para aguardando (prazo: ${formattedBR})`
+    }
+
     // Registrar a atualização no histórico
     await supabase.from("ticket_updates").insert({
       ticket_id: params.id,
@@ -65,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       update_type: "status_change",
       old_value: ticket.status,
       new_value: status,
-      comment: comment || `Status alterado para ${status}${status === "aguardando" && expected_resolution_at ? ` (prazo: ${expected_resolution_at})` : ""}`,
+      comment: historyComment,
     })
 
     return NextResponse.json({ success: true })
