@@ -4,7 +4,16 @@ CREATE TABLE IF NOT EXISTS tickets (
   ticket_number SERIAL UNIQUE NOT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
-  service_type VARCHAR(50) NOT NULL CHECK (service_type IN ('Manutenção', 'Eletricista', 'Manutenção de computadores', 'Suporte ao usuario / Sistema')),
+  service_type VARCHAR(50) NOT NULL CHECK (
+    service_type IN (
+      'Departamento Pessoal',
+      'RH',
+      'Comercial',
+      'Manutenção Infraestrutura',
+      'Manutenção de computadores',
+      'Suporte TI'
+    )
+  ),
   priority VARCHAR(20) DEFAULT 'media' CHECK (priority IN ('baixa', 'media', 'alta', 'urgente')),
   status VARCHAR(20) DEFAULT 'aberto' CHECK (status IN ('aberto', 'em_andamento', 'aguardando', 'resolvido', 'fechado')),
   store_id UUID NOT NULL REFERENCES users(id),

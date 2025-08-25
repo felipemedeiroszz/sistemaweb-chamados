@@ -39,10 +39,12 @@ const priorityOptions = [
 
 const serviceTypeOptions = [
   { value: "", label: "Todos os Serviços" },
-  { value: "Manutenção", label: "Manutenção" },
-  { value: "Eletricista", label: "Eletricista" },
+  { value: "Departamento Pessoal", label: "Departamento Pessoal" },
+  { value: "RH", label: "RH" },
+  { value: "Comercial", label: "Comercial" },
+  { value: "Manutenção Infraestrutura", label: "Manutenção Infraestrutura" },
   { value: "Manutenção de computadores", label: "Manutenção de computadores" },
-  { value: "Suporte ao usuario / Sistema", label: "Suporte ao usuário / Sistema" },
+  { value: "Suporte TI", label: "Suporte TI" },
 ]
 
 const dateRangeOptions = [

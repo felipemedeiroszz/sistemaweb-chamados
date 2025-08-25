@@ -14,10 +14,10 @@ INSERT INTO users (email, password_hash, name, user_type, store_number) VALUES
 ('loja12@empresa.com', '$2b$10$example_hash_12', 'Loja 12', 'loja', 12)
 ON CONFLICT (email) DO NOTHING;
 
--- Inserir técnicos de exemplo
+-- Inserir técnicos de exemplo (novas especialidades)
 INSERT INTO users (email, password_hash, name, user_type, speciality) VALUES
-('manutencao1@empresa.com', '$2b$10$example_hash_tech1', 'João Silva - Manutenção', 'tecnico', 'Manutenção'),
-('eletricista1@empresa.com', '$2b$10$example_hash_tech2', 'Maria Santos - Eletricista', 'tecnico', 'Eletricista'),
+('manutencao1@empresa.com', '$2b$10$example_hash_tech1', 'João Silva - Manutenção Infra', 'tecnico', 'Manutenção Infraestrutura'),
+('eletricista1@empresa.com', '$2b$10$example_hash_tech2', 'Maria Santos - Manutenção Infra', 'tecnico', 'Manutenção Infraestrutura'),
 ('computador1@empresa.com', '$2b$10$example_hash_tech3', 'Pedro Costa - TI', 'tecnico', 'Manutenção de computadores'),
-('suporte1@empresa.com', '$2b$10$example_hash_tech4', 'Ana Lima - Suporte', 'tecnico', 'Suporte ao usuario / Sistema')
+('suporte1@empresa.com', '$2b$10$example_hash_tech4', 'Ana Lima - Suporte TI', 'tecnico', 'Suporte TI')
 ON CONFLICT (email) DO NOTHING;

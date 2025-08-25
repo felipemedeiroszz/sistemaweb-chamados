@@ -6,7 +6,13 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('loja', 'tecnico')),
   store_number INTEGER CHECK (store_number BETWEEN 1 AND 12),
-  speciality VARCHAR(50) CHECK (speciality IN ('Manutenção', 'Eletricista', 'Manutenção de computadores', 'Suporte ao usuario / Sistema')),
+  speciality VARCHAR(50) CHECK (
+    speciality IN (
+      'Manutenção Infraestrutura',
+      'Manutenção de computadores',
+      'Suporte TI'
+    )
+  ),
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

@@ -17,7 +17,14 @@ interface NewTicketModalProps {
   onClose: () => void
 }
 
-const serviceTypes = ["Manutenção", "Eletricista", "Manutenção de computadores", "Suporte ao usuario / Sistema"]
+const serviceTypes = [
+  "Departamento Pessoal",
+  "RH",
+  "Comercial",
+  "Manutenção Infraestrutura",
+  "Manutenção de computadores",
+  "Suporte TI",
+]
 
 const priorities = [
   { value: "baixa", label: "Baixa" },
@@ -103,7 +110,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
             <label htmlFor="service-type" className="text-sm font-medium">
               Tipo de Serviço
             </label>
-            <Select value={serviceType} onValueChange={setServiceType} required>
+            <Select value={serviceType} onValueChange={(v: string) => setServiceType(v)} required>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de serviço" />
               </SelectTrigger>
