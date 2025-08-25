@@ -7,10 +7,18 @@ CREATE TABLE IF NOT EXISTS users (
   user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('loja', 'tecnico')),
   store_number INTEGER CHECK (store_number BETWEEN 1 AND 12),
   speciality VARCHAR(50) CHECK (
-    speciality IN (
-      'Manutenção Infraestrutura',
-      'Manutenção de computadores',
-      'Suporte TI'
+    (
+      user_type = 'tecnico' AND speciality IN (
+        'Manutenção Infraestrutura',
+        'Manutenção de computadores',
+        'Suporte TI',
+        'Departamento Pessoal',
+        'RH',
+        'Comercial'
+      )
+    )
+    OR (
+      user_type = 'loja' AND speciality IS NULL
     )
   ),
   active BOOLEAN DEFAULT true,
