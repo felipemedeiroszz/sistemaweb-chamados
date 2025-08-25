@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -35,14 +33,22 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
   const [comment, setComment] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [expectedResolutionAt, setExpectedResolutionAt] = useState<string>("")
+  const [deadlineModalOpen, setDeadlineModalOpen] = useState(false)
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
     try {
+      if (status === "aguardando" && !expectedResolutionAt) {
+        setLoading(false)
+        setError("Defina o prazo de resolução para status 'Aguardando'.")
+        setDeadlineModalOpen(true)
+        return
+      }
       const response = await fetch(`/api/tickets/${ticket.id}/update`, {
         method: "POST",
         headers: {
@@ -51,12 +57,14 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
         body: JSON.stringify({
           status,
           comment,
+          expected_resolution_at: expectedResolutionAt ? new Date(expectedResolutionAt).toISOString() : undefined,
         }),
       })
 
       if (response.ok) {
         onClose()
         setComment("")
+        setExpectedResolutionAt("")
         router.refresh()
       } else {
         const data = await response.json()
@@ -89,7 +97,15 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
             <label htmlFor="status" className="text-sm font-medium">
               Status
             </label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select
+              value={status}
+              onValueChange={(value: string) => {
+                setStatus(value)
+                if (value === "aguardando" && !expectedResolutionAt) {
+                  setDeadlineModalOpen(true)
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -103,6 +119,17 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
             </Select>
           </div>
 
+          {status === "aguardando" && expectedResolutionAt && (
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div>
+                Prazo selecionado: {new Date(expectedResolutionAt).toLocaleString()}
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setDeadlineModalOpen(true)}>
+                Alterar prazo
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label htmlFor="comment" className="text-sm font-medium">
               Comentário (opcional)
@@ -110,7 +137,7 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
             <Textarea
               id="comment"
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e: any) => setComment(e.target.value)}
               placeholder="Adicione um comentário sobre a atualização"
               rows={4}
             />
@@ -133,6 +160,41 @@ export default function UpdateTicketModal({ ticket, isOpen, onClose }: UpdateTic
           </div>
         </form>
       </DialogContent>
+
+      {/* Modal secundário para escolher o prazo (calendário/data-hora) */}
+      <Dialog open={deadlineModalOpen} onOpenChange={setDeadlineModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Definir prazo de resolução</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label htmlFor="deadline" className="text-sm font-medium">
+              Data e hora
+            </label>
+            <input
+              id="deadline"
+              type="datetime-local"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={expectedResolutionAt}
+              onChange={(e: any) => setExpectedResolutionAt(e.target.value)}
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setDeadlineModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!expectedResolutionAt) return
+                  setDeadlineModalOpen(false)
+                }}
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

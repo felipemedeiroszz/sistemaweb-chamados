@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { status, comment } = await request.json()
+    const { status, comment, expected_resolution_at } = await request.json()
 
     if (!status) {
       return NextResponse.json({ error: "Status é obrigatório" }, { status: 400 })
@@ -39,6 +39,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       updateData.resolved_at = new Date().toISOString()
     }
 
+    // Se status for "aguardando", exigir e salvar o prazo estimado
+    if (status === "aguardando") {
+      if (!expected_resolution_at) {
+        return NextResponse.json(
+          { error: "Prazo de resolução é obrigatório quando o status é 'aguardando'" },
+          { status: 400 }
+        )
+      }
+      updateData.expected_resolution_at = expected_resolution_at
+    }
+
     // Atualizar o status do chamado
     const { error: updateError } = await supabase.from("tickets").update(updateData).eq("id", params.id)
 
@@ -54,7 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       update_type: "status_change",
       old_value: ticket.status,
       new_value: status,
-      comment: comment || `Status alterado para ${status}`,
+      comment: comment || `Status alterado para ${status}${status === "aguardando" && expected_resolution_at ? ` (prazo: ${expected_resolution_at})` : ""}`,
     })
 
     return NextResponse.json({ success: true })
