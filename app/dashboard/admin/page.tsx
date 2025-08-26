@@ -163,7 +163,8 @@ export default function AdminDashboardPage() {
         speciality: form.speciality === "" ? undefined : form.speciality,
         active: form.active,
       }
-      if (!editingUser) payload.password = form.password
+      // Envia a senha apenas se preenchida (tanto na criação quanto na edição)
+      if (form.password) payload.password = form.password
 
       const res = await fetch(editingUser ? `/api/users/${editingUser.id}` : "/api/users", {
         method: editingUser ? "PATCH" : "POST",
@@ -676,12 +677,18 @@ export default function AdminDashboardPage() {
                     <label className="text-sm text-gray-600">Especialidade (técnico)</label>
                     <Input value={form.speciality} onChange={(e: any) => setForm({ ...form, speciality: e.target.value })} placeholder="Ex.: TI, Rede, Impressoras" />
                   </div>
-                  {!editingUser && (
-                    <div className="md:col-span-2">
-                      <label className="text-sm text-gray-600">Senha</label>
-                      <Input type="password" value={form.password} onChange={(e: any) => setForm({ ...form, password: e.target.value })} placeholder="Senha inicial" />
-                    </div>
-                  )}
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-gray-600">{editingUser ? "Nova senha (opcional)" : "Senha"}</label>
+                    <Input
+                      type="password"
+                      value={form.password}
+                      onChange={(e: any) => setForm({ ...form, password: e.target.value })}
+                      placeholder={editingUser ? "Deixe em branco para manter a atual" : "Senha inicial"}
+                    />
+                    {editingUser && (
+                      <p className="mt-1 text-xs text-gray-500">Se deixar em branco, a senha não será alterada.</p>
+                    )}
+                  </div>
                   <div className="md:col-span-2 flex items-center space-x-2">
                     <input id="active" type="checkbox" checked={form.active} onChange={(e: any) => setForm({ ...form, active: e.target.checked })} />
                     <label htmlFor="active" className="text-sm text-gray-700">Ativo</label>
