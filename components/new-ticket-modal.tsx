@@ -145,7 +145,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Novo Chamado</DialogTitle>
