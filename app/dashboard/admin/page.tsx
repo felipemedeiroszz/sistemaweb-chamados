@@ -555,7 +555,6 @@ export default function AdminDashboardPage() {
                       <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="loja">Loja</SelectItem>
                       <SelectItem value="tecnico">Técnico</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -658,7 +657,17 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <label className="text-sm text-gray-600">Tipo</label>
-                    <Select value={form.user_type} onValueChange={(v: "loja" | "tecnico" | "admin") => setForm({ ...form, user_type: v })}>
+                    <Select
+                      value={form.user_type}
+                      onValueChange={(v: "loja" | "tecnico" | "admin") =>
+                        setForm({
+                          ...form,
+                          user_type: v,
+                          // Limpa especialidade quando não for técnico
+                          speciality: v === "tecnico" ? form.speciality : "",
+                        })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -673,10 +682,24 @@ export default function AdminDashboardPage() {
                     <label className="text-sm text-gray-600">Loja (opcional)</label>
                     <Input type="number" value={String(form.store_number)} onChange={(e: any) => setForm({ ...form, store_number: e.target.value })} placeholder="Número da loja" />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="text-sm text-gray-600">Especialidade (técnico)</label>
-                    <Input value={form.speciality} onChange={(e: any) => setForm({ ...form, speciality: e.target.value })} placeholder="Ex.: TI, Rede, Impressoras" />
-                  </div>
+                  {form.user_type === "tecnico" && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-gray-600">Especialidade</label>
+                      <Select value={form.speciality || undefined} onValueChange={(v: any) => setForm({ ...form, speciality: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a especialidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Departamento Pessoal">Departamento Pessoal</SelectItem>
+                          <SelectItem value="RH">RH</SelectItem>
+                          <SelectItem value="Comercial">Comercial</SelectItem>
+                          <SelectItem value="Manutenção infraestrutura">Manutenção infraestrutura</SelectItem>
+                          <SelectItem value="Manutenção de computadores">Manutenção de computadores</SelectItem>
+                          <SelectItem value="Suporte TI">Suporte TI</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <label className="text-sm text-gray-600">{editingUser ? "Nova senha (opcional)" : "Senha"}</label>
                     <Input
