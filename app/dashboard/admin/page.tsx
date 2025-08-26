@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React from "react"
+
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
   CheckCircle, 
   Clock, 
@@ -13,6 +17,10 @@ import {
   User 
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
+
+// Shim React hooks for TS environments where hook types are not exported
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { useState, useEffect, useCallback } = React as any
 import {
   BarChart,
   Bar,
@@ -41,13 +49,43 @@ interface Ticket {
   technician_name?: string
 }
 
+interface AdminUser {
+  id: string
+  email: string
+  name: string
+  user_type: "loja" | "tecnico" | "admin"
+  store_number?: number | null
+  speciality?: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export default function AdminDashboardPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [tickets, setTickets] = useState([] as Ticket[])
   const [loading, setLoading] = useState(true)
-  // Abas principais: dashboard | chamados
+  // Abas principais: dashboard | chamados | usuarios
   const [activeMainTab, setActiveMainTab] = useState("dashboard")
   // Abas de status dos chamados
   const [statusTab, setStatusTab] = useState("todos")
+  // Usuários (admin)
+  const [users, setUsers] = useState([] as AdminUser[])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [userModalOpen, setUserModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState(null as AdminUser | null)
+  const [form, setForm] = useState({
+    email: "",
+    name: "",
+    user_type: "loja" as "loja" | "tecnico" | "admin",
+    store_number: "" as string | number,
+    speciality: "",
+    active: true,
+    password: "",
+  })
+  // Filtros de usuários
+  const [userFilterType, setUserFilterType] = useState("all" as "all" | "loja" | "tecnico" | "admin")
+  const [userFilterActive, setUserFilterActive] = useState("all" as "all" | "active" | "inactive")
+  const [userSearch, setUserSearch] = useState("")
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -68,6 +106,91 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchTickets()
   }, [fetchTickets])
+
+  // Carregar usuários quando entrar na aba Usuarios
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true)
+    try {
+      const res = await fetch("/api/users")
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users || [])
+      }
+    } catch (e) {
+      console.error("Erro ao carregar usuários", e)
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeMainTab === "usuarios") {
+      loadUsers()
+    }
+  }, [activeMainTab, loadUsers])
+
+  const resetForm = () => {
+    setEditingUser(null)
+    setForm({ email: "", name: "", user_type: "loja", store_number: "", speciality: "", active: true, password: "" })
+  }
+
+  const openCreate = () => {
+    resetForm()
+    setUserModalOpen(true)
+  }
+
+  const openEdit = (u: AdminUser) => {
+    setEditingUser(u)
+    setForm({
+      email: u.email,
+      name: u.name,
+      user_type: u.user_type,
+      store_number: u.store_number ?? "",
+      speciality: u.speciality ?? "",
+      active: u.active,
+      password: "",
+    })
+    setUserModalOpen(true)
+  }
+
+  const submitUser = async () => {
+    try {
+      const payload: any = {
+        email: form.email,
+        name: form.name,
+        user_type: form.user_type,
+        store_number: form.store_number === "" ? undefined : Number(form.store_number),
+        speciality: form.speciality === "" ? undefined : form.speciality,
+        active: form.active,
+      }
+      if (!editingUser) payload.password = form.password
+
+      const res = await fetch(editingUser ? `/api/users/${editingUser.id}` : "/api/users", {
+        method: editingUser ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Falha ao salvar usuário")
+      setUserModalOpen(false)
+      await loadUsers()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const toggleUserActive = async (u: AdminUser) => {
+    try {
+      const res = await fetch(`/api/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !u.active }),
+      })
+      if (!res.ok) throw new Error("Falha ao alterar status do usuário")
+      await loadUsers()
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   // Realtime: ouvir mudanças na tabela tickets e refazer o fetch
   useEffect(() => {
@@ -215,6 +338,7 @@ export default function AdminDashboardPage() {
         <TabsList className="mb-2">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="chamados">Chamados</TabsTrigger>
+          <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -410,6 +534,168 @@ export default function AdminDashboardPage() {
               </Tabs>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="usuarios">
+          <Card>
+            <CardHeader className="space-y-3">
+              <div className="flex items-center justify-between">
+                <CardTitle>Usuários</CardTitle>
+                <Button size="sm" onClick={openCreate}>Novo Usuário</Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div>
+                  <label className="text-xs text-gray-600">Tipo</label>
+                  <Select value={userFilterType} onValueChange={(v: any) => setUserFilterType(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="loja">Loja</SelectItem>
+                      <SelectItem value="tecnico">Técnico</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600">Status</label>
+                  <Select value={userFilterActive} onValueChange={(v: any) => setUserFilterActive(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="inactive">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-gray-600">Buscar (nome/email)</label>
+                  <Input value={userSearch} onChange={(e: any) => setUserSearch(e.target.value)} placeholder="Buscar..." className="h-9" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {usersLoading ? (
+                <div className="text-center py-8">Carregando...</div>
+              ) : (() => {
+                const term = userSearch.trim().toLowerCase()
+                const filtered = users.filter((u: AdminUser) => {
+                  if (userFilterType !== "all" && u.user_type !== userFilterType) return false
+                  if (userFilterActive !== "all") {
+                    if (userFilterActive === "active" && !u.active) return false
+                    if (userFilterActive === "inactive" && u.active) return false
+                  }
+
+                  if (term) {
+                    const hay = `${u.name} ${u.email}`.toLowerCase()
+                    if (!hay.includes(term)) return false
+                  }
+                  return true
+                })
+                return filtered.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">Nenhum usuário encontrado.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[900px] grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
+                      <div>Email</div>
+                      <div>Nome</div>
+                      <div>Tipo</div>
+                      <div>Loja</div>
+                      <div>Especialidade</div>
+                      <div>Ativo</div>
+                      <div>Criado</div>
+                      <div>Atualizado</div>
+                      <div>Ações</div>
+                    </div>
+                    <div className="space-y-2">
+                      {filtered.map((u: AdminUser) => (
+                        <div key={u.id} className="min-w-[900px] grid grid-cols-9 gap-2 items-center bg-white border rounded p-2">
+                          <div className="truncate">{u.email}</div>
+                          <div className="truncate">{u.name}</div>
+                          <div>{u.user_type}</div>
+                          <div>{u.store_number ?? "-"}</div>
+                          <div className="truncate">{u.speciality ?? "-"}</div>
+                          <div>
+                            <Badge variant="outline" className={u.active ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-600 border-gray-200"}>
+                              {u.active ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
+                          <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
+                          <div>{new Date(u.updated_at).toLocaleDateString("pt-BR")}</div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Editar</Button>
+                            <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
+                              {u.active ? "Desativar" : "Ativar"}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+
+          <Dialog open={userModalOpen} onOpenChange={setUserModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-gray-600">Email</label>
+                    <Input value={form.email} onChange={(e: any) => setForm({ ...form, email: e.target.value })} placeholder="email@dominio.com" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Nome</label>
+                    <Input value={form.name} onChange={(e: any) => setForm({ ...form, name: e.target.value })} placeholder="Nome" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Tipo</label>
+                    <Select value={form.user_type} onValueChange={(v: "loja" | "tecnico" | "admin") => setForm({ ...form, user_type: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="loja">Loja</SelectItem>
+                        <SelectItem value="tecnico">Técnico</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Loja (opcional)</label>
+                    <Input type="number" value={String(form.store_number)} onChange={(e: any) => setForm({ ...form, store_number: e.target.value })} placeholder="Número da loja" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-gray-600">Especialidade (técnico)</label>
+                    <Input value={form.speciality} onChange={(e: any) => setForm({ ...form, speciality: e.target.value })} placeholder="Ex.: TI, Rede, Impressoras" />
+                  </div>
+                  {!editingUser && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-gray-600">Senha</label>
+                      <Input type="password" value={form.password} onChange={(e: any) => setForm({ ...form, password: e.target.value })} placeholder="Senha inicial" />
+                    </div>
+                  )}
+                  <div className="md:col-span-2 flex items-center space-x-2">
+                    <input id="active" type="checkbox" checked={form.active} onChange={(e: any) => setForm({ ...form, active: e.target.checked })} />
+                    <label htmlFor="active" className="text-sm text-gray-700">Ativo</label>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button onClick={submitUser}>{editingUser ? "Salvar" : "Criar"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
