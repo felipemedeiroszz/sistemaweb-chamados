@@ -33,7 +33,7 @@ interface Ticket {
   title: string
   description: string
   status: "aberto" | "em_andamento" | "aguardando" | "resolvido"
-  priority: "baixa" | "media" | "alta"
+  priority: "baixa" | "media" | "alta" | "urgente"
   created_at: string
   store_number: number
   store_name: string
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
       acc[t.priority] = (acc[t.priority] || 0) + 1
       return acc
     },
-    { baixa: 0, media: 0, alta: 0 } as Record<Ticket["priority"], number>
+    { baixa: 0, media: 0, alta: 0, urgente: 0 } as Record<Ticket["priority"], number>
   )
   const topLojas = Object.values(
     tickets.reduce((acc, t) => {
@@ -168,6 +168,7 @@ export default function AdminDashboardPage() {
     { name: "Resolvido", value: countByStatus.resolvido },
   ]
   const priorityData = [
+    { name: "Urgente", value: countByPriority.urgente },
     { name: "Alta", value: countByPriority.alta },
     { name: "Média", value: countByPriority.media },
     { name: "Baixa", value: countByPriority.baixa },
