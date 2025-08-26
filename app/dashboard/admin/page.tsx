@@ -13,6 +13,20 @@ import {
   User 
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts"
 
 interface Ticket {
   id: string
@@ -124,6 +138,42 @@ export default function AdminDashboardPage() {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
 
+  // Dataset: últimos 14 dias (por dia)
+  const days = Array.from({ length: 14 }).map((_, i) => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() - (13 - i))
+    return d
+  })
+  const perDayMap = days.reduce((acc, d) => {
+    acc[d.toISOString()] = 0
+    return acc
+  }, {} as Record<string, number>)
+  tickets.forEach((t: Ticket) => {
+    const d = new Date(t.created_at)
+    d.setHours(0, 0, 0, 0)
+    const key = d.toISOString()
+    if (key in perDayMap) perDayMap[key] += 1
+  })
+  const perDayData = days.map((d) => ({
+    day: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+    total: perDayMap[d.toISOString()] || 0,
+  }))
+
+  // Dataset: por status e prioridade para gráficos
+  const statusData = [
+    { name: "Aberto", value: countByStatus.aberto },
+    { name: "Em Andamento", value: countByStatus.em_andamento },
+    { name: "Aguardando", value: countByStatus.aguardando },
+    { name: "Resolvido", value: countByStatus.resolvido },
+  ]
+  const priorityData = [
+    { name: "Alta", value: countByPriority.alta },
+    { name: "Média", value: countByPriority.media },
+    { name: "Baixa", value: countByPriority.baixa },
+  ]
+  const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"]
+
   // Status badge component
   const StatusBadge = ({ status }: { status: Ticket["status"] }) => {
     if (status === "aguardando") {
@@ -212,49 +262,55 @@ export default function AdminDashboardPage() {
                 <CardTitle>Prioridade</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex justify-between"><span>Alta</span><span className="font-medium">{countByPriority.alta}</span></li>
-                  <li className="flex justify-between"><span>Média</span><span className="font-medium">{countByPriority.media}</span></li>
-                  <li className="flex justify-between"><span>Baixa</span><span className="font-medium">{countByPriority.baixa}</span></li>
-                </ul>
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie dataKey="value" data={priorityData} nameKey="name" outerRadius={80} label>
+                        {priorityData.map((_, idx) => (
+                          <Cell key={`cell-p-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Lojas com mais chamados</CardTitle>
+                <CardTitle>Chamados por Status</CardTitle>
               </CardHeader>
               <CardContent>
-                {topLojas.length === 0 ? (
-                  <p className="text-sm text-gray-500">Sem dados</p>
-                ) : (
-                  <ul className="space-y-2 text-sm">
-                    {topLojas.map((l) => (
-                      <li key={l.key} className="flex justify-between">
-                        <span>{l.name} (#{l.number})</span>
-                        <span className="font-medium">{l.count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={statusData}>
+                      <XAxis dataKey="name" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="value" name="Qtd" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Técnicos com mais chamados</CardTitle>
+                <CardTitle>Chamados por Dia (14d)</CardTitle>
               </CardHeader>
               <CardContent>
-                {topTecnicos.length === 0 ? (
-                  <p className="text-sm text-gray-500">Sem dados</p>
-                ) : (
-                  <ul className="space-y-2 text-sm">
-                    {topTecnicos.map((t) => (
-                      <li key={t.name} className="flex justify-between">
-                        <span>{t.name}</span>
-                        <span className="font-medium">{t.count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={perDayData}>
+                      <XAxis dataKey="day" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="total" name="Chamados" stroke="#10b981" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
