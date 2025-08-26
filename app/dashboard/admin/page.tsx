@@ -674,7 +674,6 @@ export default function AdminDashboardPage() {
                       <SelectContent>
                         <SelectItem value="loja">Loja</SelectItem>
                         <SelectItem value="tecnico">Técnico</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
