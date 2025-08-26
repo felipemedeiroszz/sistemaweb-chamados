@@ -10,10 +10,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { title, description, service_type, priority } = await request.json()
+    const { title, description, service_type, priority, image_urls } = await request.json()
 
     if (!title || !description || !service_type) {
       return NextResponse.json({ error: "Título, descrição e tipo de serviço são obrigatórios" }, { status: 400 })
+    }
+
+    // Validar anexos (opcionais)
+    let images: string[] | undefined = undefined
+    if (image_urls !== undefined) {
+      if (!Array.isArray(image_urls)) {
+        return NextResponse.json({ error: "image_urls deve ser um array de URLs" }, { status: 400 })
+      }
+      if (image_urls.length > 5) {
+        return NextResponse.json({ error: "Máximo de 5 imagens permitido" }, { status: 400 })
+      }
+      // Filtra valores inválidos e garante strings
+      images = image_urls.filter((u: any) => typeof u === "string" && u.trim().length > 0).slice(0, 5)
     }
 
     const supabase = createServerClient()
@@ -27,6 +40,7 @@ export async function POST(request: NextRequest) {
         priority: priority || "media",
         store_id: user.id,
         status: "aberto",
+        image_urls: images && images.length ? images : undefined,
       })
       .select()
       .single()

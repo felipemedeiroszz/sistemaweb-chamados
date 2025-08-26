@@ -85,6 +85,12 @@ declare module 'lucide-react' {
   export const CheckCircle: ComponentType<IconProps>;
   export const Loader2: ComponentType<IconProps>;
   export const CircleAlert: ComponentType<IconProps>;
+  // Added icons used elsewhere
+  export const Calendar: ComponentType<IconProps>;
+  export const Wrench: ComponentType<IconProps>;
+  export const Building2: ComponentType<IconProps>;
+  export const Mail: ComponentType<IconProps>;
+  export const Plus: ComponentType<IconProps>;
 }
 
 declare module '@/components/ui/tabs' {
@@ -128,5 +134,12 @@ declare module '@/components/ui/tabs' {
 declare namespace JSX {
   interface IntrinsicElements {
     [elemName: string]: any;
+  }
+}
+
+// Minimal Uploadcare global typing
+declare global {
+  interface Window {
+    uploadcare?: any;
   }
 }

@@ -21,6 +21,7 @@ interface TicketDetailsProps {
     created_at: string
     updated_at: string
     resolved_at?: string
+    image_urls?: string[]
     store: {
       name: string
       store_number: number
@@ -120,6 +121,29 @@ export default function TicketDetails({ ticket, user }: TicketDetailsProps) {
                     <span className="text-sm">
                       Resolvido em: {new Date(ticket.resolved_at).toLocaleString("pt-BR")}
                     </span>
+                  </div>
+                )}
+                {Array.isArray(ticket.image_urls) && ticket.image_urls.length > 0 && (
+                  <div className="pt-2">
+                    <h4 className="font-medium text-sm mb-2">Anexos</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {ticket.image_urls.map((url) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                          title={url}
+                        >
+                          <img
+                            src={url}
+                            alt="Anexo do chamado"
+                            className="h-20 w-full object-cover rounded border"
+                          />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
