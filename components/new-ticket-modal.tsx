@@ -146,7 +146,11 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose() }}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onInteractOutside={(e: any) => e.preventDefault()}
+        onEscapeKeyDown={(e: any) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Novo Chamado</DialogTitle>
         </DialogHeader>
