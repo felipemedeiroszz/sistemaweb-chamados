@@ -14,8 +14,7 @@ import {
   CheckCircle, 
   Clock, 
   AlertCircle, 
-  User, 
-  Trash 
+  User 
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 
@@ -619,8 +618,8 @@ export default function AdminDashboardPage() {
                 return filtered.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">Nenhum usuário encontrado.</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[900px] grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
+                  <div>
+                    <div className="grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
                       <div>Email</div>
                       <div>Nome</div>
                       <div>Tipo</div>
@@ -633,7 +632,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="space-y-2">
                       {filtered.map((u: AdminUser) => (
-                        <div key={u.id} className="min-w-[900px] grid grid-cols-9 gap-2 items-center bg-white border rounded p-2">
+                        <div key={u.id} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-center bg-white border rounded p-2">
                           <div className="truncate">{u.email}</div>
                           <div className="truncate">{u.name}</div>
                           <div>{u.user_type}</div>
@@ -646,13 +645,13 @@ export default function AdminDashboardPage() {
                           </div>
                           <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
                           <div>{new Date(u.updated_at).toLocaleDateString("pt-BR")}</div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Editar</Button>
                             <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
                               {u.active ? "Desativar" : "Ativar"}
                             </Button>
-                            <Button size="icon" variant="outline" className="h-8 w-8" title="Excluir" onClick={() => openDelete(u)}>
-                              <Trash className="h-4 w-4 text-red-600" />
+                            <Button size="sm" variant="outline" className="text-red-600" title="Excluir" onClick={() => openDelete(u)}>
+                              Excluir
                             </Button>
                           </div>
                         </div>
