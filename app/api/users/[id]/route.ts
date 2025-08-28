@@ -55,3 +55,32 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
+
+// DELETE /api/users/[id] - delete user (admin only)
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const admin = await getSession()
+    if (!admin || admin.user_type !== "admin") {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+
+    const { id } = params
+    const supabase = createServerClient()
+
+    const { error } = await supabase
+      .from("users")
+      .delete()
+      .eq("id", id)
+      .single()
+
+    if (error) {
+      console.error("Erro ao excluir usuário:", error)
+      return NextResponse.json({ error: "Erro ao excluir usuário" }, { status: 500 })
+    }
+
+    return new NextResponse(null, { status: 204 })
+  } catch (e) {
+    console.error("Users DELETE error:", e)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+  }
+}

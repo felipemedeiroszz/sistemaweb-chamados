@@ -14,7 +14,8 @@ import {
   CheckCircle, 
   Clock, 
   AlertCircle, 
-  User 
+  User, 
+  Trash 
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 
@@ -73,6 +74,8 @@ export default function AdminDashboardPage() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [userModalOpen, setUserModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState(null as AdminUser | null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingUser, setDeletingUser] = useState(null as AdminUser | null)
   const [form, setForm] = useState({
     email: "",
     name: "",
@@ -187,6 +190,24 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ active: !u.active }),
       })
       if (!res.ok) throw new Error("Falha ao alterar status do usuário")
+      await loadUsers()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const openDelete = (u: AdminUser) => {
+    setDeletingUser(u)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingUser) return
+    try {
+      const res = await fetch(`/api/users/${deletingUser.id}`, { method: "DELETE" })
+      if (!res.ok && res.status !== 204) throw new Error("Falha ao excluir usuário")
+      setDeleteDialogOpen(false)
+      setDeletingUser(null)
       await loadUsers()
     } catch (e) {
       console.error(e)
@@ -630,6 +651,9 @@ export default function AdminDashboardPage() {
                             <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
                               {u.active ? "Desativar" : "Ativar"}
                             </Button>
+                            <Button size="icon" variant="outline" className="h-8 w-8" title="Excluir" onClick={() => openDelete(u)}>
+                              <Trash className="h-4 w-4 text-red-600" />
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -639,6 +663,23 @@ export default function AdminDashboardPage() {
               })()}
             </CardContent>
           </Card>
+
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirmar exclusão</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <p>Tem certeza que deseja excluir o usuário{deletingUser ? ` ${deletingUser.name}` : ""}? Esta ação não pode ser desfeita.</p>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button variant="destructive" onClick={confirmDelete}>Sim, excluir</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={userModalOpen} onOpenChange={setUserModalOpen}>
             <DialogContent>
