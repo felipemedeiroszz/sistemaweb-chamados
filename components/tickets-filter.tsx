@@ -99,10 +99,12 @@ export default function TicketsFilter({ onFilterChange, userType }: TicketsFilte
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-              <Filter className="h-4 w-4 mr-2" />
-              Filtros
-            </Button>
+            {userType !== "loja" && (
+              <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
+              </Button>
+            )}
             {hasActiveFilters && (
               <Button variant="outline" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-2" />
@@ -111,7 +113,7 @@ export default function TicketsFilter({ onFilterChange, userType }: TicketsFilte
             )}
           </div>
 
-          {showFilters && (
+          {userType !== "loja" && showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
               <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
                 <SelectTrigger>
