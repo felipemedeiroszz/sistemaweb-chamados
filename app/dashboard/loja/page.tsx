@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import DashboardHeader from "@/components/dashboard-header"
-import TicketsList from "@/components/tickets-list"
+import TicketsBrowser from "@/components/tickets-browser"
 import NewTicketButton from "@/components/new-ticket-button"
 import StatsCards from "@/components/stats-cards"
 
@@ -51,7 +51,7 @@ export default async function LojaDashboard() {
         </div>
 
         <div className="mt-6">
-          <TicketsList tickets={tickets || []} userType="loja" />
+          <TicketsBrowser tickets={tickets || []} userType="loja" />
         </div>
       </main>
     </div>

@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
 import DashboardHeader from "@/components/dashboard-header"
-import TechnicianTicketsList from "@/components/technician-tickets-list"
+import TechnicianTicketsBrowser from "@/components/technician-tickets-browser"
 import StatsCards from "@/components/stats-cards"
 
 export default async function TecnicoDashboard() {
@@ -69,19 +69,11 @@ export default async function TecnicoDashboard() {
           }}
         />
 
-        <div className="mt-8 space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Chamados Disponíveis</h2>
-            <TechnicianTicketsList
-              tickets={availableTickets?.filter((t) => !t.assigned_technician_id) || []}
-              type="available"
-            />
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Meus Chamados</h2>
-            <TechnicianTicketsList tickets={myTickets || []} type="assigned" />
-          </div>
+        <div className="mt-8">
+          <TechnicianTicketsBrowser
+            available={(availableTickets || []).filter((t: any) => !t.assigned_technician_id)}
+            assigned={myTickets || []}
+          />
         </div>
       </main>
     </div>

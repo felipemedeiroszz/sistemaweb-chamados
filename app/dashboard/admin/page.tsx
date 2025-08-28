@@ -38,6 +38,7 @@ import {
 
 interface Ticket {
   id: string
+  ticket_number?: number
   title: string
   description: string
   status: "aberto" | "em_andamento" | "aguardando" | "resolvido"
@@ -68,6 +69,8 @@ export default function AdminDashboardPage() {
   const [activeMainTab, setActiveMainTab] = useState("dashboard")
   // Abas de status dos chamados
   const [statusTab, setStatusTab] = useState("todos")
+  // Busca de chamados (por nº ou texto)
+  const [ticketsSearch, setTicketsSearch] = useState("")
   // Usuários (admin)
   const [users, setUsers] = useState([] as AdminUser[])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -233,14 +236,25 @@ export default function AdminDashboardPage() {
     }
   }, [fetchTickets])
 
-  // Filtrar chamados conforme as abas de status
-  const filteredTickets = tickets.filter((ticket: Ticket) => {
-    if (statusTab === "todos") return true
-    if (statusTab === "em_andamento") return ticket.status === "em_andamento"
-    if (statusTab === "aguardando") return ticket.status === "aguardando"
-    if (statusTab === "resolvido") return ticket.status === "resolvido"
-    return true
-  })
+  // Filtrar chamados conforme as abas de status e busca
+  const filteredTickets = tickets
+    .filter((ticket: Ticket) => {
+      if (statusTab === "todos") return true
+      if (statusTab === "em_andamento") return ticket.status === "em_andamento"
+      if (statusTab === "aguardando") return ticket.status === "aguardando"
+      if (statusTab === "resolvido") return ticket.status === "resolvido"
+      return true
+    })
+    .filter((ticket: Ticket) => {
+      const term = ticketsSearch.trim().toLowerCase()
+      if (!term) return true
+      const numeric = term.startsWith("#") ? term.slice(1) : term
+      if (/^\d+$/.test(numeric)) {
+        return String(ticket.ticket_number ?? "") === numeric
+      }
+      const hay = `${ticket.title} ${ticket.description}`.toLowerCase()
+      return hay.includes(term)
+    })
 
   // Métricas básicas do Dashboard
   const total = tickets.length
@@ -475,7 +489,7 @@ export default function AdminDashboardPage() {
                   {recentes.map((ticket) => (
                     <div key={ticket.id} className="flex items-center justify-between text-sm border-b last:border-b-0 py-2">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">{ticket.title}</span>
+                        <span className="font-medium">{ticket.ticket_number ? `#${ticket.ticket_number} - ` : ""}{ticket.title}</span>
                         <StatusBadge status={ticket.status} />
                       </div>
                       <div className="flex items-center space-x-4 text-gray-600">
@@ -496,7 +510,16 @@ export default function AdminDashboardPage() {
         <TabsContent value="chamados">
           <Card>
             <CardHeader>
-              <CardTitle>Todos os Chamados</CardTitle>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <CardTitle>Todos os Chamados</CardTitle>
+                <div className="relative w-full md:w-80">
+                  <Input
+                    placeholder="Buscar por nº do ticket (ex: #123) ou texto..."
+                    value={ticketsSearch}
+                    onChange={(e: any) => setTicketsSearch(e.target.value)}
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Tabs value={statusTab} onValueChange={setStatusTab}>
@@ -521,7 +544,7 @@ export default function AdminDashboardPage() {
                           <div className="p-4 border-b border-gray-100">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
-                                <h3 className="font-medium">{ticket.title}</h3>
+                                <h3 className="font-medium">{ticket.ticket_number ? `#${ticket.ticket_number} - ` : ""}{ticket.title}</h3>
                                 <StatusBadge status={ticket.status} />
                               </div>
                               <Button variant="outline" size="sm" asChild>

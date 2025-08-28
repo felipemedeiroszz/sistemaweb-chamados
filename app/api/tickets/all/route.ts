@@ -35,9 +35,10 @@ export async function GET() {
       )
     }
 
-    // Format tickets for frontend
+    // Format tickets for frontend (include ticket_number)
     const formattedTickets = tickets.map((ticket: any) => ({
       id: ticket.id,
+      ticket_number: ticket.ticket_number,
       title: ticket.title,
       description: ticket.description,
       status: ticket.status,
