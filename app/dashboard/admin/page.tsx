@@ -645,14 +645,34 @@ export default function AdminDashboardPage() {
                           </div>
                           <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
                           <div>{new Date(u.updated_at).toLocaleDateString("pt-BR")}</div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Editar</Button>
-                            <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
-                              {u.active ? "Desativar" : "Ativar"}
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600" title="Excluir" onClick={() => openDelete(u)}>
-                              Excluir
-                            </Button>
+                          <div className="flex items-center justify-start md:justify-end">
+                            {/* Mobile: menu compacto */}
+                            <div className="flex w-full md:hidden">
+                              <Select onValueChange={(v) => {
+                                if (v === "edit") return openEdit(u)
+                                if (v === "toggle") return toggleUserActive(u)
+                                if (v === "delete") return openDelete(u)
+                              }}>
+                                <SelectTrigger className="h-8 w-full">
+                                  <SelectValue placeholder="Ações" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="edit">Editar</SelectItem>
+                                  <SelectItem value="toggle">{u.active ? "Desativar" : "Ativar"}</SelectItem>
+                                  <SelectItem value="delete">Excluir</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {/* Desktop: botões alinhados */}
+                            <div className="hidden md:flex items-center gap-2 justify-end w-full">
+                              <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Editar</Button>
+                              <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
+                                {u.active ? "Desativar" : "Ativar"}
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600" title="Excluir" onClick={() => openDelete(u)}>
+                                Excluir
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
