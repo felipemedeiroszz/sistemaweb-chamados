@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -10,6 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
+import ImageAttachModal from "@/components/image-attach-modal"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { useState } = React as any
 
 interface NewTicketModalProps {
   isOpen: boolean
@@ -39,70 +43,34 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   const [priority, setPriority] = useState("media")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [imageUrls, setImageUrls] = useState([] as string[])
+  const [showAttach, setShowAttach] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState([] as File[])
   const router = useRouter()
 
-  // Helper para carregar o script do Uploadcare sob demanda
-  const loadUploadcare = () =>
-    new Promise<void>((resolve, reject) => {
-      if (typeof window === "undefined") return reject(new Error("janela indisponível"))
-      // @ts-ignore
-      if ((window as any).uploadcare) return resolve()
-      let script = document.querySelector("script[data-uploadcare]") as HTMLScriptElement | null
-      if (!script) {
-        script = document.createElement("script")
-        script.src = "https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"
-        script.async = true
-        script.dataset.uploadcare = "true"
-        script.onload = () => resolve()
-        script.onerror = () => reject(new Error("falha ao carregar uploadcare"))
-        document.body.appendChild(script)
-      } else {
-        script.onload = () => resolve()
+  const handleAttachImages = () => {
+    setShowAttach(true)
+  }
+
+  const uploadSelectedImages = async (): Promise<string[]> => {
+    if (!isSupabaseConfigured) return []
+    const bucket = "ticket-images"
+    const uploadedUrls: string[] = []
+    for (let i = 0; i < Math.min(selectedFiles.length, 5); i++) {
+      const f = selectedFiles[i]
+      const path = `tickets/${Date.now()}-${i}-${f.name}`
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: f.type || "image/jpeg",
+      })
+      if (upErr) {
+        throw upErr
       }
-    })
-
-  const handleAttachImages = async () => {
-    try {
-      await loadUploadcare()
-      // @ts-ignore - uploadcare global vem do script CDN
-      const uc = (window as any).uploadcare
-      const dialog = uc.openDialog(null, {
-        publicKey: "abf873644e637f115f34",
-        multiple: true,
-        multipleMax: 5,
-        imagesOnly: true,
-        preferredTypes: "image/*",
-        // Opcional: fontes externas
-      })
-
-      const files: any[] = await new Promise((resolve, reject) => {
-        dialog
-          .done((fileGroup: any) => {
-            if (fileGroup && typeof fileGroup.files === "function") {
-              // V3 group
-              Promise.all(fileGroup.files().map((f: any) => f.done()))
-                .then(resolve)
-                .catch(reject)
-            } else if (fileGroup && typeof fileGroup.done === "function") {
-              // Single file
-              fileGroup.done().then((f: any) => resolve([f])).catch(reject)
-            } else {
-              resolve([])
-            }
-          })
-          .fail(reject)
-      })
-
-      const urls = files
-        .map((f: any) => f && (f.cdnUrl || f.cdnUrlModifiers ? `${f.cdnUrl}${f.cdnUrlModifiers || ""}` : null))
-        .filter((u: string | null) => !!u) as string[]
-
-      const limited = urls.slice(0, 5)
-      setImageUrls(limited)
-    } catch (e) {
-      setError("Não foi possível anexar as imagens. Tente novamente.")
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+      if (data?.publicUrl) uploadedUrls.push(data.publicUrl)
     }
+    return uploadedUrls
   }
 
   const handleSubmit = async (e: any) => {
@@ -111,6 +79,10 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
     setError("")
 
     try {
+      let urlsToSend: string[] = imageUrls
+      if (selectedFiles.length > 0) {
+        urlsToSend = await uploadSelectedImages()
+      }
       const response = await fetch("/api/tickets", {
         method: "POST",
         headers: {
@@ -121,7 +93,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
           description,
           service_type: serviceType,
           priority,
-          image_urls: imageUrls,
+          image_urls: urlsToSend,
         }),
       })
 
@@ -132,6 +104,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
         setServiceType("")
         setPriority("media")
         setImageUrls([])
+        setSelectedFiles([])
         router.refresh()
       } else {
         const data = await response.json()
@@ -145,6 +118,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose() }}>
       <DialogContent
         className="sm:max-w-[500px]"
@@ -231,20 +205,29 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
               <Button type="button" variant="secondary" onClick={handleAttachImages}>
                 Anexar imagens
               </Button>
-              {imageUrls.length > 0 && (
-                <span className="text-sm text-gray-600">{imageUrls.length} selecionada(s)</span>
+              {(selectedFiles.length > 0 || imageUrls.length > 0) && (
+                <span className="text-sm text-gray-600">{selectedFiles.length || imageUrls.length} selecionada(s)</span>
               )}
             </div>
-            {imageUrls.length > 0 && (
+            {(selectedFiles.length > 0 || imageUrls.length > 0) && (
               <div className="grid grid-cols-5 gap-2 mt-2">
-                {imageUrls.map((url: string) => (
-                  <img
-                    key={url}
-                    src={url}
-                    alt="Anexo"
-                    className="h-16 w-16 object-cover rounded border"
-                  />)
-                )}
+                {selectedFiles.length > 0
+                  ? selectedFiles.map((f: File, idx: number) => (
+                      <img
+                        key={idx}
+                        src={URL.createObjectURL(f)}
+                        alt={f.name}
+                        className="h-16 w-16 object-cover rounded border"
+                      />
+                    ))
+                  : imageUrls.map((url: string) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt="Anexo"
+                        className="h-16 w-16 object-cover rounded border"
+                      />
+                    ))}
               </div>
             )}
           </div>
@@ -267,5 +250,12 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
         </form>
       </DialogContent>
     </Dialog>
+    <ImageAttachModal
+      isOpen={showAttach}
+      onClose={() => setShowAttach(false)}
+      onConfirm={(files) => { setSelectedFiles(files); setShowAttach(false) }}
+      maxFiles={5}
+    />
+    </>
   )
 }
