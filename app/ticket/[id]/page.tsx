@@ -5,6 +5,8 @@ import { notFound } from "next/navigation"
 import DashboardHeader from "@/components/dashboard-header"
 import TicketDetails from "@/components/ticket-details"
 import TicketHistory from "@/components/ticket-history"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default async function TicketPage({ params }: { params: { id: string } }) {
   const user = await getSession()
@@ -51,12 +53,23 @@ export default async function TicketPage({ params }: { params: { id: string } })
     .eq("ticket_id", params.id)
     .order("created_at", { ascending: true })
 
+  // user is guaranteed after redirects above
+  const userType = user!.user_type as "admin" | "loja" | "tecnico"
+  const dashboardHref =
+    userType === "admin" ? "/dashboard/admin" : userType === "loja" ? "/dashboard/loja" : "/dashboard/tecnico"
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader user={user} />
 
       <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
+          {/* Back to dashboard */}
+          <div>
+            <Link href={dashboardHref}>
+              <Button variant="outline">← Voltar ao Dashboard</Button>
+            </Link>
+          </div>
           <TicketDetails ticket={ticket} user={user} />
           <TicketHistory history={history || []} />
         </div>
