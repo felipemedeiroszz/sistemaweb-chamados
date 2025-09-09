@@ -20,6 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       user_type,
       store_number,
       speciality,
+      phone,
       active,
     } = body || {}
 
@@ -31,6 +32,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (user_type !== undefined) updatePayload.user_type = user_type
     if (store_number !== undefined) updatePayload.store_number = store_number
     if (speciality !== undefined) updatePayload.speciality = speciality
+    if (phone !== undefined) updatePayload.phone = phone
     if (active !== undefined) updatePayload.active = !!active
 
     if (password) {
@@ -41,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       .from("users")
       .update(updatePayload)
       .eq("id", id)
-      .select("id, email, name, user_type, store_number, speciality, active, created_at, updated_at")
+      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
       .single()
 
     if (error) {

@@ -57,6 +57,7 @@ interface AdminUser {
   user_type: "loja" | "tecnico" | "admin"
   store_number?: number | null
   speciality?: string | null
+  phone?: string | null
   active: boolean
   created_at: string
   updated_at: string
@@ -84,6 +85,7 @@ export default function AdminDashboardPage() {
     user_type: "loja" as "loja" | "tecnico" | "admin",
     store_number: "" as string | number,
     speciality: "",
+    phone: "",
     active: true,
     password: "",
   })
@@ -136,7 +138,7 @@ export default function AdminDashboardPage() {
 
   const resetForm = () => {
     setEditingUser(null)
-    setForm({ email: "", name: "", user_type: "loja", store_number: "", speciality: "", active: true, password: "" })
+    setForm({ email: "", name: "", user_type: "loja", store_number: "", speciality: "", phone: "", active: true, password: "" })
   }
 
   const openCreate = () => {
@@ -152,6 +154,7 @@ export default function AdminDashboardPage() {
       user_type: u.user_type,
       store_number: u.store_number ?? "",
       speciality: u.speciality ?? "",
+      phone: u.phone ?? "",
       active: u.active,
       password: "",
     })
@@ -166,6 +169,7 @@ export default function AdminDashboardPage() {
         user_type: form.user_type,
         store_number: form.store_number === "" ? undefined : Number(form.store_number),
         speciality: form.speciality === "" ? undefined : form.speciality,
+        phone: form.phone === "" ? undefined : form.phone,
         active: form.active,
       }
       // Envia a senha apenas se preenchida (tanto na criação quanto na edição)
@@ -641,21 +645,23 @@ export default function AdminDashboardPage() {
                 return filtered.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">Nenhum usuário encontrado.</div>
                 ) : (
-                  <div>
-                    <div className="grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
-                      <div>Email</div>
-                      <div>Nome</div>
-                      <div>Tipo</div>
-                      <div>Loja</div>
-                      <div>Especialidade</div>
-                      <div>Ativo</div>
-                      <div>Criado</div>
-                      <div>Atualizado</div>
-                      <div>Ações</div>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[1200px]">
+                      <div className="grid grid-cols-10 gap-2 text-xs font-medium text-gray-500 mb-2">
+                        <div>Email</div>
+                        <div>Nome</div>
+                        <div>Tipo</div>
+                        <div>Loja</div>
+                        <div>Especialidade</div>
+                        <div>Ativo</div>
+                        <div>Criado</div>
+                        <div>Atualizado</div>
+                        <div>Telefone</div>
+                        <div>Ações</div>
+                      </div>
                     <div className="space-y-2">
                       {filtered.map((u: AdminUser) => (
-                        <div key={u.id} className="grid grid-cols-1 md:grid-cols-9 gap-2 items-center bg-white border rounded p-2">
+                        <div key={u.id} className="grid grid-cols-10 gap-2 items-center bg-white border rounded p-2">
                           <div className="truncate">{u.email}</div>
                           <div className="truncate">{u.name}</div>
                           <div>{u.user_type}</div>
@@ -668,6 +674,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
                           <div>{new Date(u.updated_at).toLocaleDateString("pt-BR")}</div>
+                          <div className="truncate">{u.phone ?? "-"}</div>
                           <div className="flex items-center justify-start md:justify-end">
                             {/* Mobile: menu compacto */}
                             <div className="flex w-full md:hidden">
@@ -699,6 +706,7 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
                       ))}
+                      </div>
                     </div>
                   </div>
                 )
@@ -763,6 +771,10 @@ export default function AdminDashboardPage() {
                   <div>
                     <label className="text-sm text-gray-600">Loja (opcional)</label>
                     <Input type="number" value={String(form.store_number)} onChange={(e: any) => setForm({ ...form, store_number: e.target.value })} placeholder="Número da loja" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Telefone</label>
+                    <Input value={form.phone} onChange={(e: any) => setForm({ ...form, phone: e.target.value })} placeholder="+5511987654321" />
                   </div>
                   {form.user_type === "tecnico" && (
                     <div className="md:col-span-2">

@@ -14,7 +14,7 @@ export async function GET() {
     const supabase = createServerClient()
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, name, user_type, store_number, speciality, active, created_at, updated_at")
+      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       user_type,
       store_number,
       speciality,
+      phone,
       active = true,
     } = body || {}
 
@@ -67,11 +68,12 @@ export async function POST(request: NextRequest) {
 
     if (store_number !== undefined) insertPayload.store_number = store_number
     if (speciality !== undefined) insertPayload.speciality = speciality
+    if (phone !== undefined) insertPayload.phone = phone
 
     const { data, error } = await supabase
       .from("users")
       .insert(insertPayload)
-      .select("id, email, name, user_type, store_number, speciality, active, created_at, updated_at")
+      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
       .single()
 
     if (error) {
