@@ -1,0 +1,81 @@
+import twilio from 'twilio';
+
+// Configurações do Twilio
+const accountSid = 'AC2257dbe2fa58febf88505c7570b7f53e';
+const authToken = 'a17aa8601eeccf7ab30f68e2b2cc20f4';
+const twilioPhoneNumber = '+12403875516';
+
+// Cliente Twilio
+const client = twilio(accountSid, authToken);
+
+export interface SMSMessage {
+  to: string;
+  message: string;
+}
+
+/**
+ * Envia SMS usando Twilio
+ * @param to Número de telefone de destino (formato: +5511999999999)
+ * @param message Mensagem a ser enviada
+ * @returns Promise com resultado do envio
+ */
+export async function sendSMS(to: string, message: string): Promise<boolean> {
+  try {
+    // Validar formato do número
+    if (!to || !to.startsWith('+')) {
+      console.error('Número de telefone inválido:', to);
+      return false;
+    }
+
+    // Enviar SMS
+    const result = await client.messages.create({
+      body: message,
+      from: twilioPhoneNumber,
+      to: to
+    });
+
+    console.log('SMS enviado com sucesso:', result.sid);
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar SMS:', error);
+    return false;
+  }
+}
+
+/**
+ * Envia notificação de chamado assumido
+ * @param storePhone Telefone da loja
+ * @param ticketId ID do chamado
+ * @param technicianName Nome do técnico
+ */
+export async function sendTicketAssignedSMS(
+  storePhone: string,
+  ticketId: string,
+  technicianName: string
+): Promise<boolean> {
+  const message = `Olá! Seu chamado #${ticketId} foi assumido pelo técnico ${technicianName}. Acompanhe o andamento pelo sistema.`;
+  return await sendSMS(storePhone, message);
+}
+
+/**
+ * Envia notificação de mudança de status
+ * @param storePhone Telefone da loja
+ * @param ticketId ID do chamado
+ * @param newStatus Novo status do chamado
+ */
+export async function sendTicketStatusChangeSMS(
+  storePhone: string,
+  ticketId: string,
+  newStatus: string
+): Promise<boolean> {
+  const statusMessages = {
+    'em_andamento': 'em andamento',
+    'aguardando': 'aguardando resposta',
+    'resolvido': 'resolvido'
+  };
+
+  const statusText = statusMessages[newStatus as keyof typeof statusMessages] || newStatus;
+  const message = `Seu chamado #${ticketId} teve o status alterado para: ${statusText}. Verifique os detalhes no sistema.`;
+  
+  return await sendSMS(storePhone, message);
+}
