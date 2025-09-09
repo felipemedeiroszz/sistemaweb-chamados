@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { createServerClient } from "@/lib/supabase/server"
+import { sendTicketStatusChangeSMS } from "@/lib/sms"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -83,6 +84,27 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       new_value: status,
       comment: historyComment,
     })
+
+    // Buscar dados da loja para envio de SMS
+    const { data: storeData } = await supabase
+      .from("users")
+      .select("phone")
+      .eq("id", ticket.store_id)
+      .single()
+
+    // Enviar SMS de notificação se a loja tiver telefone
+    if (storeData?.phone) {
+      try {
+        await sendTicketStatusChangeSMS(
+          storeData.phone,
+          ticket.ticket_number?.toString() || params.id,
+          status
+        )
+      } catch (smsError) {
+        console.error("Erro ao enviar SMS:", smsError)
+        // Não falha a operação se o SMS falhar
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
