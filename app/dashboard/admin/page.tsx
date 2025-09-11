@@ -647,7 +647,7 @@ export default function AdminDashboardPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <div className="min-w-[1200px]">
-                      <div className="grid grid-cols-10 gap-2 text-xs font-medium text-gray-500 mb-2">
+                      <div className="grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
                         <div>Email</div>
                         <div>Nome</div>
                         <div>Tipo</div>
@@ -655,13 +655,12 @@ export default function AdminDashboardPage() {
                         <div>Especialidade</div>
                         <div>Ativo</div>
                         <div>Criado</div>
-                        <div>Atualizado</div>
                         <div>Telefone</div>
                         <div>Ações</div>
                       </div>
                     <div className="space-y-2">
                       {filtered.map((u: AdminUser) => (
-                        <div key={u.id} className="grid grid-cols-10 gap-2 items-center bg-white border rounded p-2">
+                        <div key={u.id} className="grid grid-cols-9 gap-2 items-center bg-white border rounded p-2">
                           <div className="truncate">{u.email}</div>
                           <div className="truncate">{u.name}</div>
                           <div>{u.user_type}</div>
@@ -673,7 +672,6 @@ export default function AdminDashboardPage() {
                             </Badge>
                           </div>
                           <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
-                          <div>{new Date(u.updated_at).toLocaleDateString("pt-BR")}</div>
                           <div className="truncate">{u.phone ?? "-"}</div>
                           <div className="flex items-center justify-start md:justify-end">
                             {/* Mobile: menu compacto */}
