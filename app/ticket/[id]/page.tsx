@@ -53,7 +53,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
     .eq("ticket_id", params.id)
     .order("created_at", { ascending: true })
 
-  // user is guaranteed after redirects above
+  // O usuário é garantido após os redirecionamentos acima
   const userType = user!.user_type as "admin" | "loja" | "tecnico"
   const dashboardHref =
     userType === "admin" ? "/dashboard/admin" : userType === "loja" ? "/dashboard/loja" : "/dashboard/tecnico"
@@ -64,7 +64,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
 
       <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* Back to dashboard */}
+          {/* Voltar ao dashboard */}
           <div>
             <Link href={dashboardHref}>
               <Button variant="outline">← Voltar ao Dashboard</Button>

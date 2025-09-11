@@ -7,10 +7,10 @@ import AdminLoginModal from "@/components/admin-login-modal"
 import LoginForm from "@/components/login-form"
 
 export default function LoginPage() {
-  // Admin login modal state
+  // Estado do modal de login de administrador
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
 
-  // Handle logo click
+  // Tratar clique no logo
   const handlePaulistaLogoClick = () => {
     setIsAdminModalOpen(true)
   }
@@ -39,7 +39,7 @@ export default function LoginPage() {
         </div>
       </div>
       
-      {/* Admin Login Modal */}
+      {/* Modal de Login do Administrador */}
       <AdminLoginModal isOpen={isAdminModalOpen} onClose={() => setIsAdminModalOpen(false)} />
     </div>
   )

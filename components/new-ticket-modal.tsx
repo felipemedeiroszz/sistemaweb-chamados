@@ -80,12 +80,12 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
         dialog
           .done((fileGroup: any) => {
             if (fileGroup && typeof fileGroup.files === "function") {
-              // V3 group
+              // Grupo V3
               Promise.all(fileGroup.files().map((f: any) => f.done()))
                 .then(resolve)
                 .catch(reject)
             } else if (fileGroup && typeof fileGroup.done === "function") {
-              // Single file
+              // Arquivo único
               fileGroup.done().then((f: any) => resolve([f])).catch(reject)
             } else {
               resolve([])

@@ -1,4 +1,4 @@
-// React and Next.js type declarations
+// Declarações de tipos para React e Next.js
 declare module 'react' {
   export * from 'react';
 }
@@ -85,7 +85,7 @@ declare module 'lucide-react' {
   export const CheckCircle: ComponentType<IconProps>;
   export const Loader2: ComponentType<IconProps>;
   export const CircleAlert: ComponentType<IconProps>;
-  // Added icons used elsewhere
+  // Ícones adicionais usados em outros lugares
   export const Calendar: ComponentType<IconProps>;
   export const Wrench: ComponentType<IconProps>;
   export const Building2: ComponentType<IconProps>;
@@ -130,14 +130,14 @@ declare module '@/components/ui/tabs' {
   export function TabsContent(props: TabsContentProps): JSX.Element;
 }
 
-// Add JSX namespace to fix "JSX element implicitly has type 'any'" errors
+// Adicionar namespace JSX para corrigir erros "JSX element implicitly has type 'any'"
 declare namespace JSX {
   interface IntrinsicElements {
     [elemName: string]: any;
   }
 }
 
-// Minimal Uploadcare global typing
+// Tipagem global mínima para Uploadcare
 declare global {
   interface Window {
     uploadcare?: any;

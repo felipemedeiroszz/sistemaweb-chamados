@@ -11,7 +11,7 @@ export default function AdminDashboardLayout({
 }) {
   const router = useRouter()
 
-  // Check if user is admin on client side
+  // Verificar no cliente se o usuário é admin
   useEffect(() => {
     const checkAdminAuth = async () => {
       try {

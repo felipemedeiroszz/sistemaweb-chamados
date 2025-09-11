@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 
-// Shim React hooks for TS environments where hook types are not exported
+// Shim dos hooks do React para ambientes TS onde os tipos dos hooks não são exportados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const { useState, useEffect, useCallback } = React as any
 import {
@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "tickets" },
         () => {
-          // Refetch ao inserir/atualizar/excluir
+          // Recarregar ao inserir/atualizar/excluir
           fetchTickets()
         }
       )
@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
   ]
   const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"]
 
-  // Status badge component
+  // Componente de badge de status
   const StatusBadge = ({ status }: { status: Ticket["status"] }) => {
     if (status === "aguardando") {
       return (

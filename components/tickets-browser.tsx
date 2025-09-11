@@ -3,7 +3,7 @@ import React from "react"
 import TicketsList from "@/components/tickets-list"
 import TicketsFilter, { type FilterState } from "@/components/tickets-filter"
 
-// Shim React hooks for TS environments where hook types are not exported
+// Shim dos hooks do React para ambientes TS onde os tipos dos hooks não são exportados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const { useMemo, useState } = React as any
 
@@ -40,7 +40,7 @@ export default function TicketsBrowser({ tickets, userType }: TicketsBrowserProp
     const term = filters.search.trim().toLowerCase()
 
     return tickets.filter((t) => {
-      // Match by ticket number when numeric or starts with '#'
+      // Buscar por número do ticket quando for numérico ou começar com '#'
       if (term) {
         const numeric = term.startsWith("#") ? term.slice(1) : term
         if (/^\d+$/.test(numeric)) {
@@ -54,7 +54,7 @@ export default function TicketsBrowser({ tickets, userType }: TicketsBrowserProp
       if (filters.status && t.status !== filters.status) return false
       if (filters.priority && t.priority !== filters.priority) return false
       if (filters.serviceType && t.service_type !== filters.serviceType) return false
-      // dateRange omitted for brevity; can be added if needed
+      // dateRange omitido para brevidade; pode ser adicionado se necessário
 
       return true
     })

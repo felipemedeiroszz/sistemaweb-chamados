@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth"
 
 export async function GET() {
   try {
-    // Check if user is authenticated and is admin
+    // Verificar se o usuário está autenticado e é admin
     const user = await getSession()
     
     if (!user || user.user_type !== "admin") {
@@ -16,8 +16,8 @@ export async function GET() {
 
     const supabase = createServerClient()
     
-    // Get all tickets with store and technician information
-    // Use explicit column-based relationship syntax to avoid relying on constraint names
+    // Obter todos os chamados com informações da loja e do técnico
+    // Usar sintaxe explícita de relacionamento por colunas para não depender de nomes de constraints
     const { data: tickets, error } = await supabase
       .from("tickets")
       .select(`
@@ -35,7 +35,7 @@ export async function GET() {
       )
     }
 
-    // Format tickets for frontend (include ticket_number)
+    // Formatar chamados para o frontend (inclui ticket_number)
     const formattedTickets = tickets.map((ticket: any) => ({
       id: ticket.id,
       ticket_number: ticket.ticket_number,
