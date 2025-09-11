@@ -646,8 +646,8 @@ export default function AdminDashboardPage() {
                   <div className="text-center py-8 text-gray-500">Nenhum usuário encontrado.</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <div className="min-w-[1200px]">
-                      <div className="grid grid-cols-9 gap-2 text-xs font-medium text-gray-500 mb-2">
+                    <div className="min-w-[1280px]">
+                      <div className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.6fr_1fr_0.8fr_0.9fr_1.1fr_1.4fr] gap-2 text-xs font-medium text-gray-500 mb-2">
                         <div>Email</div>
                         <div>Nome</div>
                         <div>Tipo</div>
@@ -660,7 +660,7 @@ export default function AdminDashboardPage() {
                       </div>
                     <div className="space-y-2">
                       {filtered.map((u: AdminUser) => (
-                        <div key={u.id} className="grid grid-cols-9 gap-2 items-center bg-white border rounded p-2">
+                        <div key={u.id} className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.6fr_1fr_0.8fr_0.9fr_1.1fr_1.4fr] gap-2 items-center bg-white border rounded p-2">
                           <div className="truncate">{u.email}</div>
                           <div className="truncate">{u.name}</div>
                           <div>{u.user_type}</div>
@@ -672,8 +672,8 @@ export default function AdminDashboardPage() {
                             </Badge>
                           </div>
                           <div>{new Date(u.created_at).toLocaleDateString("pt-BR")}</div>
-                          <div className="truncate">{u.phone ?? "-"}</div>
-                          <div className="flex items-center justify-start md:justify-end">
+                          <div className="truncate whitespace-nowrap">{u.phone ?? "-"}</div>
+                          <div className="flex items-center justify-start md:justify-end flex-nowrap">
                             {/* Mobile: menu compacto */}
                             <div className="flex w-full md:hidden">
                               <Select onValueChange={(v) => {
@@ -692,7 +692,7 @@ export default function AdminDashboardPage() {
                               </Select>
                             </div>
                             {/* Desktop: botões alinhados */}
-                            <div className="hidden md:flex items-center gap-2 justify-end w-full">
+                            <div className="hidden md:flex items-center gap-2 justify-end w-full flex-nowrap">
                               <Button size="sm" variant="outline" onClick={() => openEdit(u)}>Editar</Button>
                               <Button size="sm" variant={u.active ? "destructive" as any : "default"} onClick={() => toggleUserActive(u)}>
                                 {u.active ? "Desativar" : "Ativar"}
