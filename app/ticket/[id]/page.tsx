@@ -8,7 +8,8 @@ import TicketHistory from "@/components/ticket-history"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function TicketPage({ params }: { params: { id: string } }) {
+export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await getSession()
 
   if (!user) {
@@ -25,7 +26,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
     LEFT JOIN users tech ON t.assigned_technician_id = tech.id
     WHERE t.id = ?
     LIMIT 1`,
-    [params.id]
+    [id]
   )
 
   if (!ticket) {
@@ -76,7 +77,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
     LEFT JOIN users u ON tu.user_id = u.id
     WHERE tu.ticket_id = ?
     ORDER BY tu.created_at ASC`,
-    [params.id]
+    [id]
   )
 
   // Format history to match previous structure

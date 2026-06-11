@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState } from "react";
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import NewTicketModal from "./new-ticket-modal"
@@ -11,7 +11,7 @@ export default function NewTicketButton() {
   return (
     <>
       <Button onClick={() => setIsModalOpen(true)}>
-        <Plus className="h-4 w-4 mr-2" />
+        <Plus className="h-4 w-4"/>
         Novo Chamado
       </Button>
 

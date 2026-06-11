@@ -28,7 +28,8 @@ export function getConnectionPool() {
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   try {
     const pool = getConnectionPool()
-    const [rows] = await pool.execute(sql, params)
+    const sanitizedParams = params.map(p => p === undefined ? null : p)
+    const [rows] = await pool.execute(sql, sanitizedParams)
     return rows as T[]
   } catch (error) {
     console.error("Erro na consulta SQL:", error)
@@ -45,7 +46,7 @@ export async function queryOne<T = any>(sql: string, params: any[] = []): Promis
 
 export async function insert(table: string, data: Record<string, any>): Promise<string> {
   const keys = Object.keys(data)
-  const values = Object.values(data)
+  const values = Object.values(data).map(p => p === undefined ? null : p)
   const placeholders = keys.map(() => "?").join(", ")
 
   const sql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`
@@ -60,7 +61,7 @@ export async function insert(table: string, data: Record<string, any>): Promise<
 export async function update(table: string, data: Record<string, any>, where: Record<string, any>): Promise<void> {
   const setClauses = Object.keys(data).map(key => `${key} = ?`).join(", ")
   const whereClauses = Object.keys(where).map(key => `${key} = ?`).join(" AND ")
-  const values = [...Object.values(data), ...Object.values(where)]
+  const values = [...Object.values(data), ...Object.values(where)].map(p => p === undefined ? null : p)
 
   const sql = `UPDATE ${table} SET ${setClauses} WHERE ${whereClauses}`
   const pool = getConnectionPool()
@@ -69,7 +70,7 @@ export async function update(table: string, data: Record<string, any>, where: Re
 
 export async function deleteRow(table: string, where: Record<string, any>): Promise<void> {
   const whereClauses = Object.keys(where).map(key => `${key} = ?`).join(" AND ")
-  const values = Object.values(where)
+  const values = Object.values(where).map(p => p === undefined ? null : p)
 
   const sql = `DELETE FROM ${table} WHERE ${whereClauses}`
   const pool = getConnectionPool()

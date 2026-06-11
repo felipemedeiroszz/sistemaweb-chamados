@@ -4,14 +4,14 @@ import { queryOne, update, deleteRow } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 // PATCH /api/users/[id] - update user (admin only)
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const admin = await getSession()
     if (!admin || admin.user_type !== "admin") {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { id } = params
     const body = await request.json()
     const {
       email,
@@ -53,14 +53,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // DELETE /api/users/[id] - delete user (admin only)
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const admin = await getSession()
     if (!admin || admin.user_type !== "admin") {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { id } = params
     await deleteRow("users", { id })
 
     return new NextResponse(null, { status: 204 })

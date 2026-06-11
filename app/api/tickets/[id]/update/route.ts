@@ -3,8 +3,9 @@ import { getSession } from "@/lib/auth"
 import { queryOne, update, insert, generateUUID } from "@/lib/db"
 import { sendTicketStatusChangeSMS } from "@/lib/sms"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const user = await getSession()
 
     if (!user || user.user_type !== "tecnico") {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Verificar se o chamado pertence ao técnico
     const ticket = await queryOne<any>(
       "SELECT * FROM tickets WHERE id = ? AND assigned_technician_id = ? LIMIT 1",
-      [params.id, user.id]
+      [id, user.id]
     )
 
     if (!ticket) {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // Atualizar o status do chamado
-    await update("tickets", updateData, { id: params.id })
+    await update("tickets", updateData, { id })
 
     // Preparar comentário amigável com data/hora BR quando aplicável
     let historyComment = comment || `Status alterado para ${status}`
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Registrar a atualização no histórico
     await insert("ticket_updates", {
       id: generateUUID(),
-      ticket_id: params.id,
+      ticket_id: id,
       user_id: user.id,
       update_type: "status_change",
       old_value: ticket.status,
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       try {
         await sendTicketStatusChangeSMS(
           storeData.phone,
-          ticket.ticket_number?.toString() || params.id,
+          ticket.ticket_number?.toString() || id,
           status
         )
       } catch (smsError) {

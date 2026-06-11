@@ -3,8 +3,9 @@ import { getSession } from "@/lib/auth"
 import { queryOne, update, insert, generateUUID } from "@/lib/db"
 import { sendTicketAssignedSMS } from "@/lib/sms"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const user = await getSession()
 
     if (!user || user.user_type !== "tecnico") {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Verificar se o chamado existe e está disponível
     const ticket = await queryOne<any>(
       "SELECT * FROM tickets WHERE id = ? AND service_type = ? AND assigned_technician_id IS NULL LIMIT 1",
-      [params.id, user.speciality]
+      [id, user.speciality]
     )
 
     if (!ticket) {
@@ -25,12 +26,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     await update("tickets", {
       assigned_technician_id: user.id,
       status: "em_andamento",
-    }, { id: params.id })
+    }, { id })
 
     // Registrar a atribuição no histórico
     await insert("ticket_updates", {
       id: generateUUID(),
-      ticket_id: params.id,
+      ticket_id: id,
       user_id: user.id,
       update_type: "assignment",
       new_value: user.id,
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       try {
         await sendTicketAssignedSMS(
           storeData.phone,
-          ticket.ticket_number?.toString() || params.id,
+          ticket.ticket_number?.toString() || id,
           user.name
         )
       } catch (smsError) {
