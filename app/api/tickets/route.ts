@@ -104,15 +104,27 @@ export async function GET() {
     }
 
     // Formatar tickets com image_urls parseado
-    const formattedTickets = tickets.map(ticket => ({
+  const formattedTickets = tickets.map(ticket => {
+    let imageUrlsParsed = null
+    try {
+      if (ticket.image_urls) {
+        imageUrlsParsed = JSON.parse(ticket.image_urls)
+      }
+    } catch (e) {
+      console.error("Erro ao fazer parse de image_urls:", e)
+      imageUrlsParsed = null
+    }
+
+    return {
       ...ticket,
-      image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+      image_urls: imageUrlsParsed,
       store: {
         name: ticket.store_name,
         store_number: ticket.store_number
       },
       technician: ticket.technician_name ? { name: ticket.technician_name } : null
-    }))
+    }
+  })
 
     return NextResponse.json({ tickets: formattedTickets })
   } catch (error) {

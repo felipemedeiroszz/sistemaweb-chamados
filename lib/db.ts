@@ -26,9 +26,16 @@ export function getConnectionPool() {
 }
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  const pool = getConnectionPool()
-  const [rows] = await pool.execute(sql, params)
-  return rows as T[]
+  try {
+    const pool = getConnectionPool()
+    const [rows] = await pool.execute(sql, params)
+    return rows as T[]
+  } catch (error) {
+    console.error("Erro na consulta SQL:", error)
+    console.error("SQL:", sql)
+    console.error("Params:", params)
+    throw error
+  }
 }
 
 export async function queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {

@@ -38,18 +38,30 @@ export default async function TecnicoDashboard() {
   )
 
   // Format tickets to match previous structure
-  const formatTicket = (ticket: any) => ({
-    ...ticket,
-    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
-    store: {
-      name: ticket.store_name,
-      store_number: ticket.store_number
-    },
-    assigned_technician: ticket.assigned_technician_name ? {
-      name: ticket.assigned_technician_name,
-      speciality: ticket.assigned_technician_speciality
-    } : null
-  })
+  const formatTicket = (ticket: any) => {
+    let imageUrlsParsed = null
+    try {
+      if (ticket.image_urls) {
+        imageUrlsParsed = JSON.parse(ticket.image_urls)
+      }
+    } catch (e) {
+      console.error("Erro ao fazer parse de image_urls:", e)
+      imageUrlsParsed = null
+    }
+
+    return {
+      ...ticket,
+      image_urls: imageUrlsParsed,
+      store: {
+        name: ticket.store_name,
+        store_number: ticket.store_number
+      },
+      assigned_technician: ticket.assigned_technician_name ? {
+        name: ticket.assigned_technician_name,
+        speciality: ticket.assigned_technician_speciality
+      } : null
+    }
+  }
 
   const formattedAvailableTickets = availableTickets.map(formatTicket)
   const formattedMyTickets = myTickets.map(formatTicket)

@@ -33,9 +33,19 @@ export default async function TicketPage({ params }: { params: { id: string } })
   }
 
   // Format ticket to match previous structure
+  let imageUrlsParsed = null
+  try {
+    if (ticket.image_urls) {
+      imageUrlsParsed = JSON.parse(ticket.image_urls)
+    }
+  } catch (e) {
+    console.error("Erro ao fazer parse de image_urls:", e)
+    imageUrlsParsed = null
+  }
+
   const formattedTicket = {
     ...ticket,
-    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+    image_urls: imageUrlsParsed,
     store: {
       name: ticket.store_name,
       store_number: ticket.store_number,

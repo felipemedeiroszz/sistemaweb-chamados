@@ -25,14 +25,26 @@ export default async function LojaDashboard() {
   )
 
   // Format tickets to match previous structure
-  const formattedTickets = tickets.map(ticket => ({
-    ...ticket,
-    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
-    assigned_technician: ticket.assigned_technician_name ? {
-      name: ticket.assigned_technician_name,
-      speciality: ticket.assigned_technician_speciality
-    } : null
-  }))
+  const formattedTickets = tickets.map(ticket => {
+    let imageUrlsParsed = null
+    try {
+      if (ticket.image_urls) {
+        imageUrlsParsed = JSON.parse(ticket.image_urls)
+      }
+    } catch (e) {
+      console.error("Erro ao fazer parse de image_urls:", e)
+      imageUrlsParsed = null
+    }
+
+    return {
+      ...ticket,
+      image_urls: imageUrlsParsed,
+      assigned_technician: ticket.assigned_technician_name ? {
+        name: ticket.assigned_technician_name,
+        speciality: ticket.assigned_technician_speciality
+      } : null
+    }
+  })
 
   // Calcular estatísticas
   const stats = {

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { Loader2, X } from "lucide-react"
 
 interface NewTicketModalProps {
   isOpen: boolean
@@ -32,85 +32,86 @@ const priorities = [
   { value: "urgente", label: "Urgente" },
 ]
 
+// Chave da API do ImgBB
+const IMGBB_API_KEY = "19fabe85640bb1f4a22d76ec190162f4"
+const IMGBB_API_URL = "https://api.imgbb.com/1/upload"
+
 export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [serviceType, setServiceType] = useState("")
   const [priority, setPriority] = useState("media")
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [imageUrls, setImageUrls] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   // Flag para ativar/desativar upload de imagens
   const IMAGE_UPLOAD_ENABLED = true
 
-  // Helper para carregar o script do Uploadcare sob demanda
-  const loadUploadcare = () =>
-    new Promise<void>((resolve, reject) => {
-      if (typeof window === "undefined") return reject(new Error("janela indisponível"))
-      // @ts-ignore
-      if ((window as any).uploadcare) return resolve()
-      let script = document.querySelector("script[data-uploadcare]") as HTMLScriptElement | null
-      if (!script) {
-        script = document.createElement("script")
-        script.src = "https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"
-        script.async = true
-        script.dataset.uploadcare = "true"
-        script.onload = () => resolve()
-        script.onerror = () => reject(new Error("falha ao carregar uploadcare"))
-        document.body.appendChild(script)
-      } else {
-        script.onload = () => resolve()
-      }
+  const uploadImageToImgBB = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append("image", file)
+    formData.append("key", IMGBB_API_KEY)
+
+    const response = await fetch(IMGBB_API_URL, {
+      method: "POST",
+      body: formData,
     })
 
-  const handleAttachImages = async () => {
+    if (!response.ok) {
+      throw new Error("Erro ao enviar imagem para ImgBB")
+    }
+
+    const data = await response.json()
+    return data.data.url
+  }
+
+  const handleAttachImages = () => {
     if (!IMAGE_UPLOAD_ENABLED) {
       setError("Anexo de imagens está temporariamente desativado.")
       return
     }
     
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setError("")
+
     try {
-      await loadUploadcare()
-      // @ts-ignore - uploadcare global vem do script CDN
-      const uc = (window as any).uploadcare
-      const dialog = uc.openDialog(null, {
-        publicKey: "abf873644e637f115f34",
-        multiple: true,
-        multipleMax: 5,
-        imagesOnly: true,
-        preferredTypes: "image/*",
-        // Opcional: fontes externas
-      })
+      const newUrls: string[] = []
+      const filesToProcess = Array.from(files).slice(0, 5 - imageUrls.length)
 
-      const files: any[] = await new Promise((resolve, reject) => {
-        dialog
-          .done((fileGroup: any) => {
-            if (fileGroup && typeof fileGroup.files === "function") {
-              // Grupo V3
-              Promise.all(fileGroup.files().map((f: any) => f.done()))
-                .then(resolve)
-                .catch(reject)
-            } else if (fileGroup && typeof fileGroup.done === "function") {
-              // Arquivo único
-              fileGroup.done().then((f: any) => resolve([f])).catch(reject)
-            } else {
-              resolve([])
-            }
-          })
-          .fail(reject)
-      })
+      for (const file of filesToProcess) {
+        if (file.type.startsWith("image/")) {
+          const url = await uploadImageToImgBB(file)
+          newUrls.push(url)
+        }
+      }
 
-      const urls = files
-        .map((f: any) => f && (f.cdnUrl || f.cdnUrlModifiers ? `${f.cdnUrl}${f.cdnUrlModifiers || ""}` : null))
-        .filter((u: string | null) => !!u) as string[]
-
-      const limited = urls.slice(0, 5)
-      setImageUrls(limited)
+      setImageUrls(prev => [...prev, ...newUrls])
     } catch (e) {
       setError("Não foi possível anexar as imagens. Tente novamente.")
+    } finally {
+      setUploading(false)
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     }
+  }
+
+  const removeImage = (indexToRemove: number) => {
+    setImageUrls(prev => prev.filter((_, index) => index !== indexToRemove))
   }
 
   const handleSubmit = async (e: any) => {
@@ -233,28 +234,58 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
             />
           </div>
 
-          {/* Seção de upload de imagens (DESATIVADA) */}
+          {/* Input de arquivo oculto */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {/* Seção de upload de imagens */}
           {IMAGE_UPLOAD_ENABLED && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Anexos de Imagem (máx. 5)</label>
               <div className="flex items-center gap-2">
-                <Button type="button" variant="secondary" onClick={handleAttachImages}>
-                  Anexar imagens
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={handleAttachImages}
+                  disabled={uploading || imageUrls.length >= 5}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Anexar imagens"
+                  )}
                 </Button>
-                {imageUrls.length > 0 && (
-                  <span className="text-sm text-gray-600">{imageUrls.length} selecionada(s)</span>
-                )}
+                <span className="text-sm text-gray-600">
+                  {imageUrls.length} de 5 selecionada(s)
+                </span>
               </div>
               {imageUrls.length > 0 && (
                 <div className="grid grid-cols-5 gap-2 mt-2">
-                  {imageUrls.map((url: string) => (
-                    <img
-                      key={url}
-                      src={url}
-                      alt="Anexo"
-                      className="h-16 w-16 object-cover rounded border"
-                    />)
-                  )}
+                  {imageUrls.map((url: string, index: number) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Anexo ${index + 1}`}
+                        className="h-16 w-16 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -269,12 +300,6 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
               </div>
             </div>
           )}
-          
-          {/* 
-            Para reativar o upload de imagens no futuro:
-            1. Altere a flag IMAGE_UPLOAD_ENABLED para true
-            2. A funcionalidade já está pronta para usar Uploadcare e armazenar links CDN no banco
-          */}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
