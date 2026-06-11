@@ -94,6 +94,26 @@ export default function AdminDashboardPage() {
   const [userFilterActive, setUserFilterActive] = useState("all" as "all" | "active" | "inactive")
   const [userSearch, setUserSearch] = useState("")
 
+  // Checklists
+  const [checklists, setChecklists] = useState<any[]>([])
+  const [checklistsLoading, setChecklistsLoading] = useState(false)
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false)
+  const [editingChecklist, setEditingChecklist] = useState<any | null>(null)
+  const [checklistForm, setChecklistForm] = useState({
+    name: "",
+    store_id: "",
+    is_recurring: false,
+    recurring_day_of_week: null as number | null,
+    recurring_time: "",
+    items: [] as { title: string; description: string; requires_photo: boolean }[],
+  })
+  const [cloneModalOpen, setCloneModalOpen] = useState(false)
+  const [cloningChecklist, setCloningChecklist] = useState<any | null>(null)
+  const [targetStores, setTargetStores] = useState<string[]>([])
+  const [availableStores, setAvailableStores] = useState<any[]>([])
+  const [deleteChecklistDialogOpen, setDeleteChecklistDialogOpen] = useState(false)
+  const [deletingChecklist, setDeletingChecklist] = useState<any | null>(null)
+
   const fetchTickets = useCallback(async () => {
     try {
       const response = await fetch("/api/tickets/all")
@@ -135,6 +155,163 @@ export default function AdminDashboardPage() {
       loadUsers()
     }
   }, [activeMainTab, loadUsers])
+
+  // Checklists functions
+  const loadChecklists = useCallback(async () => {
+    setChecklistsLoading(true)
+    try {
+      const res = await fetch("/api/checklists")
+      if (res.ok) {
+        const data = await res.json()
+        setChecklists(data.checklists || [])
+      }
+    } catch (e) {
+      console.error("Erro ao carregar checklists", e)
+    } finally {
+      setChecklistsLoading(false)
+    }
+  }, [])
+
+  const loadAvailableStores = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users")
+      if (res.ok) {
+        const data = await res.json()
+        // Filtrar apenas lojas
+        const stores = (data.users || []).filter((u: any) => u.user_type === "loja")
+        setAvailableStores(stores)
+      }
+    } catch (e) {
+      console.error("Erro ao carregar lojas", e)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeMainTab === "checklists") {
+      loadChecklists()
+      loadAvailableStores()
+    }
+  }, [activeMainTab, loadChecklists, loadAvailableStores])
+
+  const resetChecklistForm = () => {
+    setEditingChecklist(null)
+    setChecklistForm({
+      name: "",
+      store_id: "",
+      is_recurring: false,
+      recurring_day_of_week: null,
+      recurring_time: "",
+      items: [],
+    })
+  }
+
+  const openChecklistCreate = () => {
+    resetChecklistForm()
+    setChecklistModalOpen(true)
+  }
+
+  const openChecklistEdit = (checklist: any) => {
+    setEditingChecklist(checklist)
+    setChecklistForm({
+      name: checklist.name,
+      store_id: checklist.store_id,
+      is_recurring: checklist.is_recurring || false,
+      recurring_day_of_week: checklist.recurring_day_of_week,
+      recurring_time: checklist.recurring_time || "",
+      items: checklist.items || [],
+    })
+    setChecklistModalOpen(true)
+  }
+
+  const openCloneModal = (checklist: any) => {
+    setCloningChecklist(checklist)
+    setTargetStores([])
+    setCloneModalOpen(true)
+  }
+
+  const submitChecklist = async () => {
+    try {
+      const payload = {
+        name: checklistForm.name,
+        store_id: checklistForm.store_id,
+        is_recurring: checklistForm.is_recurring,
+        recurring_day_of_week: checklistForm.is_recurring ? checklistForm.recurring_day_of_week : null,
+        recurring_time: checklistForm.is_recurring ? checklistForm.recurring_time : null,
+        items: checklistForm.items,
+      }
+
+      const res = await fetch(editingChecklist ? `/api/checklists/${editingChecklist.id}` : "/api/checklists", {
+        method: editingChecklist ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Falha ao salvar checklist")
+      }
+      setChecklistModalOpen(false)
+      await loadChecklists()
+    } catch (e) {
+      console.error("Error submitting checklist:", e)
+      alert(`Erro: ${e instanceof Error ? e.message : "Falha ao salvar checklist"}`)
+    }
+  }
+
+  const submitClone = async () => {
+    if (targetStores.length === 0) return
+    try {
+      const res = await fetch(`/api/checklists/${cloningChecklist.id}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_store_ids: targetStores }),
+      })
+
+      if (!res.ok) throw new Error("Falha ao clonar checklist")
+      setCloneModalOpen(false)
+      setCloningChecklist(null)
+      setTargetStores([])
+      await loadChecklists()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const openDeleteChecklist = (checklist: any) => {
+    setDeletingChecklist(checklist)
+    setDeleteChecklistDialogOpen(true)
+  }
+
+  const confirmDeleteChecklist = async () => {
+    if (!deletingChecklist) return
+    try {
+      const res = await fetch(`/api/checklists/${deletingChecklist.id}`, { method: "DELETE" })
+      if (!res.ok && res.status !== 204) throw new Error("Falha ao excluir checklist")
+      setDeleteChecklistDialogOpen(false)
+      setDeletingChecklist(null)
+      await loadChecklists()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const addChecklistItem = () => {
+    setChecklistForm({
+      ...checklistForm,
+      items: [...checklistForm.items, { title: "", description: "", requires_photo: false }],
+    })
+  }
+
+  const updateChecklistItem = (index: number, field: string, value: any) => {
+    const newItems = [...checklistForm.items]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setChecklistForm({ ...checklistForm, items: newItems })
+  }
+
+  const removeChecklistItem = (index: number) => {
+    const newItems = checklistForm.items.filter((_, i) => i !== index)
+    setChecklistForm({ ...checklistForm, items: newItems })
+  }
 
   const resetForm = () => {
     setEditingUser(null)
@@ -319,6 +496,13 @@ export default function AdminDashboardPage() {
   ]
   const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"]
 
+  // Helper para nome do dia da semana
+  const getDayName = (dayOfWeek: number | null): string => {
+    if (dayOfWeek === null) return ""
+    const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"]
+    return days[dayOfWeek] || ""
+  }
+
   // Componente de badge de status
   const StatusBadge = ({ status }: { status: Ticket["status"] }) => {
     if (status === "aguardando") {
@@ -360,6 +544,7 @@ export default function AdminDashboardPage() {
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="chamados">Chamados</TabsTrigger>
           <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
+          <TabsTrigger value="checklists">Checklists</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -797,6 +982,276 @@ export default function AdminDashboardPage() {
                   <Button variant="outline">Cancelar</Button>
                 </DialogClose>
                 <Button onClick={submitUser}>{editingUser ? "Salvar" : "Criar"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="checklists">
+          <Card>
+            <CardHeader className="space-y-3">
+              <div className="flex items-center justify-between">
+                <CardTitle>Checklists</CardTitle>
+                <Button size="sm" onClick={openChecklistCreate}>Novo Checklist</Button>
+              </div>
+              <p className="text-sm text-gray-500">
+                Gerencie checklists para as lojas. Apenas administradores podem criar e editar.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {checklistsLoading ? (
+                <div className="text-center py-8">Carregando checklists...</div>
+              ) : checklists.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum checklist encontrado.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {checklists.map((checklist) => (
+                    <Card key={checklist.id} className="border border-gray-200">
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-lg">{checklist.name}</h3>
+                            <p className="text-sm text-gray-500">
+                              Loja: {checklist.store_name} (#{checklist.store_number})
+                              {checklist.is_recurring && (
+                                <span className="ml-2 text-blue-600">
+                                  • Recorrente: {getDayName(checklist.recurring_day_of_week)} às {checklist.recurring_time}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openCloneModal(checklist)}>
+                              Clonar
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => openChecklistEdit(checklist)}>
+                              Editar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => openDeleteChecklist(checklist)}>
+                              Excluir
+                            </Button>
+                          </div>
+                        </div>
+                        {checklist.items && checklist.items.length > 0 && (
+                          <div className="mt-4 border-t pt-3">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Itens ({checklist.items.length}):</p>
+                            <ul className="text-sm text-gray-600 space-y-1">
+                              {checklist.items.map((item: any, idx: number) => (
+                                <li key={item.id} className="flex items-start">
+                                  <span className="mr-2">{idx + 1}.</span>
+                                  <span className="flex-1">{item.title}</span>
+                                  {item.requires_photo && (
+                                    <Badge variant="outline" className="ml-2 text-xs">Foto obrigatória</Badge>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Modal de Criar/Editar Checklist */}
+          <Dialog open={checklistModalOpen} onOpenChange={setChecklistModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingChecklist ? "Editar Checklist" : "Novo Checklist"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <Input
+                    value={checklistForm.name}
+                    onChange={(e: any) => setChecklistForm({ ...checklistForm, name: e.target.value })}
+                    placeholder="Ex: Checklist Diário de Limpeza"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Loja</label>
+                  <Select value={checklistForm.store_id} onValueChange={(v: any) => setChecklistForm({ ...checklistForm, store_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableStores.map((store) => (
+                        <SelectItem key={store.id} value={store.id}>
+                          {store.name} (#{store.store_number})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="is_recurring"
+                        type="checkbox"
+                        checked={checklistForm.is_recurring}
+                        onChange={(e: any) => setChecklistForm({ ...checklistForm, is_recurring: e.target.checked })}
+                      />
+                      <label htmlFor="is_recurring" className="text-sm font-medium text-gray-700">
+                        Tornar recorrente
+                      </label>
+                    </div>
+                    {checklistForm.is_recurring && (
+                      <div className="flex items-center space-x-2">
+                        <Select
+                          value={String(checklistForm.recurring_day_of_week ?? "")}
+                          onValueChange={(v: any) => setChecklistForm({ ...checklistForm, recurring_day_of_week: Number(v) })}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Dia da semana" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Domingo</SelectItem>
+                            <SelectItem value="1">Segunda-feira</SelectItem>
+                            <SelectItem value="2">Terça-feira</SelectItem>
+                            <SelectItem value="3">Quarta-feira</SelectItem>
+                            <SelectItem value="4">Quinta-feira</SelectItem>
+                            <SelectItem value="5">Sexta-feira</SelectItem>
+                            <SelectItem value="6">Sábado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="time"
+                          value={checklistForm.recurring_time}
+                          onChange={(e: any) => setChecklistForm({ ...checklistForm, recurring_time: e.target.value })}
+                          className="w-28"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-gray-700">Itens do Checklist</label>
+                    <Button variant="outline" size="sm" onClick={addChecklistItem}>Adicionar Item</Button>
+                  </div>
+                  {checklistForm.items.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      Nenhum item adicionado. Clique em "Adicionar Item" para começar.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {checklistForm.items.map((item, index) => (
+                        <Card key={index} className="p-3 bg-gray-50">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Item {index + 1}</span>
+                              <Button variant="ghost" size="sm" onClick={() => removeChecklistItem(index)} className="text-red-500 h-8 px-2">
+                                Remover
+                              </Button>
+                            </div>
+                            <Input
+                              placeholder="Título do item"
+                              value={item.title}
+                              onChange={(e: any) => updateChecklistItem(index, "title", e.target.value)}
+                            />
+                            <textarea
+                              placeholder="Descrição (opcional)"
+                              value={item.description}
+                              onChange={(e: any) => updateChecklistItem(index, "description", e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md resize-none"
+                              rows={2}
+                            />
+                            <div className="flex items-center space-x-2">
+                              <input
+                                id={`requires_photo_${index}`}
+                                type="checkbox"
+                                checked={item.requires_photo}
+                                onChange={(e: any) => updateChecklistItem(index, "requires_photo", e.target.checked)}
+                              />
+                              <label htmlFor={`requires_photo_${index}`} className="text-sm text-gray-600">
+                                É necessário foto?
+                              </label>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button onClick={submitChecklist}>{editingChecklist ? "Salvar" : "Criar"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Modal de Clonar Checklist */}
+          <Dialog open={cloneModalOpen} onOpenChange={setCloneModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Clonar Checklist para Outras Lojas</DialogTitle>
+              </DialogHeader>
+              <div>
+                <p className="text-sm text-gray-600 mb-3">
+                  Checklist: <strong>{cloningChecklist?.name}</strong>
+                </p>
+                <p className="text-sm text-gray-500 mb-3">
+                  Selecione as lojas para copiar este checklist:
+                </p>
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                  {availableStores
+                    .filter((store) => store.id !== cloningChecklist?.store_id)
+                    .map((store) => (
+                      <div key={store.id} className="flex items-center space-x-2">
+                        <input
+                          id={`store_${store.id}`}
+                          type="checkbox"
+                          checked={targetStores.includes(store.id)}
+                          onChange={(e: any) => {
+                            if (e.target.checked) {
+                              setTargetStores([...targetStores, store.id])
+                            } else {
+                              setTargetStores(targetStores.filter((id) => id !== store.id))
+                            }
+                          }}
+                        />
+                        <label htmlFor={`store_${store.id}`} className="text-sm">
+                          {store.name} (#{store.store_number})
+                        </label>
+                      </div>
+                    ))}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button onClick={submitClone} disabled={targetStores.length === 0}>
+                  Clonar para {targetStores.length} loja(s)
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog de Excluir Checklist */}
+          <Dialog open={deleteChecklistDialogOpen} onOpenChange={setDeleteChecklistDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Excluir Checklist</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-gray-600">
+                Tem certeza que deseja excluir o checklist <strong>"{deletingChecklist?.name}"</strong>?
+                Esta ação não pode ser desfeita.
+              </p>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button variant="destructive" onClick={confirmDeleteChecklist}>Excluir</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

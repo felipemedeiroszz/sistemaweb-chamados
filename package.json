@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "setup-db": "node setup-database.js",
+    "migrate-checklists": "node migrate-checklists.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

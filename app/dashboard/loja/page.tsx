@@ -5,6 +5,7 @@ import DashboardHeader from "@/components/dashboard-header"
 import TicketsBrowser from "@/components/tickets-browser"
 import NewTicketButton from "@/components/new-ticket-button"
 import StatsCards from "@/components/stats-cards"
+import LojaChecklistSection from "@/components/loja-checklist-section"
 
 export default async function LojaDashboard() {
   const user = await getSession()
@@ -66,13 +67,23 @@ export default async function LojaDashboard() {
 
         <StatsCards stats={stats} />
 
-        <div className="mt-8 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Meus Chamados</h2>
-          <NewTicketButton />
-        </div>
+        <div className="mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Coluna esquerda: Chamados */}
+            <div className="lg:col-span-2">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Meus Chamados</h2>
+                <NewTicketButton />
+              </div>
+              <TicketsBrowser tickets={formattedTickets} userType="loja" />
+            </div>
 
-        <div className="mt-6">
-          <TicketsBrowser tickets={formattedTickets} userType="loja" />
+            {/* Coluna direita: Checklists */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Checklists</h2>
+              <LojaChecklistSection />
+            </div>
+          </div>
         </div>
       </main>
     </div>
