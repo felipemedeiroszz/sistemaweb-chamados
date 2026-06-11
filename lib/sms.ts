@@ -1,12 +1,15 @@
 import twilio from 'twilio';
 
-// Configurações do Twilio
+// Configurações do Twilio (mantidas para uso futuro)
 const accountSid = 'AC2257dbe2fa58febf88505c7570b7f53e';
 const authToken = 'a17aa8601eeccf7ab30f68e2b2cc20f4';
 const twilioPhoneNumber = '+12403875516';
 
-// Cliente Twilio
-const client = twilio(accountSid, authToken);
+// Cliente Twilio (desativado por enquanto)
+// const client = twilio(accountSid, authToken);
+
+// Flag para ativar/desativar SMS
+const SMS_ENABLED = false;
 
 export interface SMSMessage {
   to: string;
@@ -14,27 +17,33 @@ export interface SMSMessage {
 }
 
 /**
- * Envia SMS usando Twilio
+ * Envia SMS usando Twilio (DESATIVADO POR ENQUANTO)
  * @param to Número de telefone de destino (formato: +5511999999999)
  * @param message Mensagem a ser enviada
  * @returns Promise com resultado do envio
  */
 export async function sendSMS(to: string, message: string): Promise<boolean> {
   try {
+    // Se SMS estiver desativado, apenas loga e retorna sucesso
+    if (!SMS_ENABLED) {
+      console.log('[SMS DESATIVADO] SMS não enviado:', { to, message });
+      return true;
+    }
+
     // Validar formato do número
     if (!to || !to.startsWith('+')) {
       console.error('Número de telefone inválido:', to);
       return false;
     }
 
-    // Enviar SMS
-    const result = await client.messages.create({
-      body: message,
-      from: twilioPhoneNumber,
-      to: to
-    });
+    // Enviar SMS (código mantido para uso futuro)
+    // const result = await client.messages.create({
+    //   body: message,
+    //   from: twilioPhoneNumber,
+    //   to: to
+    // });
 
-    console.log('SMS enviado com sucesso:', result.sid);
+    // console.log('SMS enviado com sucesso:', result.sid);
     return true;
   } catch (error) {
     console.error('Erro ao enviar SMS:', error);
@@ -79,3 +88,10 @@ export async function sendTicketStatusChangeSMS(
   
   return await sendSMS(storePhone, message);
 }
+
+/**
+ * Para reativar o SMS no futuro:
+ * 1. Altere a flag SMS_ENABLED para true
+ * 2. Descomente a linha que inicializa o cliente Twilio
+ * 3. Descomente o código de envio na função sendSMS
+ */

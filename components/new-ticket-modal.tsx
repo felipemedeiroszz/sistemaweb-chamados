@@ -42,6 +42,9 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const router = useRouter()
 
+  // Flag para ativar/desativar upload de imagens
+  const IMAGE_UPLOAD_ENABLED = true
+
   // Helper para carregar o script do Uploadcare sob demanda
   const loadUploadcare = () =>
     new Promise<void>((resolve, reject) => {
@@ -63,6 +66,11 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
     })
 
   const handleAttachImages = async () => {
+    if (!IMAGE_UPLOAD_ENABLED) {
+      setError("Anexo de imagens está temporariamente desativado.")
+      return
+    }
+    
     try {
       await loadUploadcare()
       // @ts-ignore - uploadcare global vem do script CDN
@@ -225,29 +233,48 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Anexos de Imagem (máx. 5)</label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" onClick={handleAttachImages}>
-                Anexar imagens
-              </Button>
-              {imageUrls.length > 0 && (
-                <span className="text-sm text-gray-600">{imageUrls.length} selecionada(s)</span>
-              )}
-            </div>
-            {imageUrls.length > 0 && (
-              <div className="grid grid-cols-5 gap-2 mt-2">
-                {imageUrls.map((url: string) => (
-                  <img
-                    key={url}
-                    src={url}
-                    alt="Anexo"
-                    className="h-16 w-16 object-cover rounded border"
-                  />)
+          {/* Seção de upload de imagens (DESATIVADA) */}
+          {IMAGE_UPLOAD_ENABLED && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Anexos de Imagem (máx. 5)</label>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="secondary" onClick={handleAttachImages}>
+                  Anexar imagens
+                </Button>
+                {imageUrls.length > 0 && (
+                  <span className="text-sm text-gray-600">{imageUrls.length} selecionada(s)</span>
                 )}
               </div>
-            )}
-          </div>
+              {imageUrls.length > 0 && (
+                <div className="grid grid-cols-5 gap-2 mt-2">
+                  {imageUrls.map((url: string) => (
+                    <img
+                      key={url}
+                      src={url}
+                      alt="Anexo"
+                      className="h-16 w-16 object-cover rounded border"
+                    />)
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Mensagem informativa quando upload está desativado */}
+          {!IMAGE_UPLOAD_ENABLED && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-500">Anexos de Imagem</label>
+              <div className="text-sm text-gray-400 italic">
+                Funcionalidade temporariamente desativada.
+              </div>
+            </div>
+          )}
+          
+          {/* 
+            Para reativar o upload de imagens no futuro:
+            1. Altere a flag IMAGE_UPLOAD_ENABLED para true
+            2. A funcionalidade já está pronta para usar Uploadcare e armazenar links CDN no banco
+          */}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
