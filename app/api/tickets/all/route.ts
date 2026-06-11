@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
 import { getSession } from "@/lib/auth"
+import { query } from "@/lib/db"
 
 export async function GET() {
   try {
@@ -14,26 +14,16 @@ export async function GET() {
       )
     }
 
-    const supabase = createServerClient()
-    
     // Obter todos os chamados com informações da loja e do técnico
-    // Usar sintaxe explícita de relacionamento por colunas para não depender de nomes de constraints
-    const { data: tickets, error } = await supabase
-      .from("tickets")
-      .select(`
-        *,
-        store:users!store_id(name, store_number),
-        technician:users!assigned_technician_id(name)
-      `)
-      .order("created_at", { ascending: false })
-    
-    if (error) {
-      console.error("Erro ao buscar chamados:", error)
-      return NextResponse.json(
-        { error: "Erro ao buscar chamados" },
-        { status: 500 }
-      )
-    }
+    const tickets = await query<any>(
+      `SELECT t.*,
+         s.name as store_name, s.store_number,
+         tech.name as technician_name
+       FROM tickets t
+       LEFT JOIN users s ON t.store_id = s.id
+       LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+       ORDER BY t.created_at DESC`
+    )
 
     // Formatar chamados para o frontend (inclui ticket_number)
     const formattedTickets = tickets.map((ticket: any) => ({
@@ -44,10 +34,10 @@ export async function GET() {
       status: ticket.status,
       priority: ticket.priority,
       created_at: ticket.created_at,
-      store_number: ticket.store?.store_number || 0,
-      store_name: ticket.store?.name || "Desconhecida",
+      store_number: ticket.store_number || 0,
+      store_name: ticket.store_name || "Desconhecida",
       assigned_to: ticket.assigned_technician_id || null,
-      technician_name: ticket.technician?.name || null,
+      technician_name: ticket.technician_name || null,
     }))
 
     return NextResponse.json({ tickets: formattedTickets })

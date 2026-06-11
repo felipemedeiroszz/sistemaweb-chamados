@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { createServerClient } from "@/lib/supabase/server"
+import { query } from "@/lib/db"
 import DashboardHeader from "@/components/dashboard-header"
 import TechnicianTicketsBrowser from "@/components/technician-tickets-browser"
 import StatsCards from "@/components/stats-cards"
@@ -12,36 +12,54 @@ export default async function TecnicoDashboard() {
     redirect("/login")
   }
 
-  const supabase = createServerClient()
-
   // Buscar chamados da especialidade do técnico
-  const { data: availableTickets } = await supabase
-    .from("tickets")
-    .select(`
-      *,
-      store:store_id(name, store_number),
-      assigned_technician:assigned_technician_id(name, speciality)
-    `)
-    .eq("service_type", user.speciality)
-    .in("status", ["aberto", "em_andamento", "aguardando"])
-    .order("created_at", { ascending: false })
+  const availableTickets = await query<any>(
+    `SELECT t.*,
+      s.name as store_name, s.store_number as store_number,
+      tech.name as assigned_technician_name, tech.speciality as assigned_technician_speciality
+    FROM tickets t
+    LEFT JOIN users s ON t.store_id = s.id
+    LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+    WHERE t.service_type = ?
+    AND t.status IN ('aberto', 'em_andamento', 'aguardando')
+    ORDER BY t.created_at DESC`,
+    [user.speciality]
+  )
 
   // Buscar chamados atribuídos ao técnico
-  const { data: myTickets } = await supabase
-    .from("tickets")
-    .select(`
-      *,
-      store:store_id(name, store_number)
-    `)
-    .eq("assigned_technician_id", user.id)
-    .order("created_at", { ascending: false })
+  const myTickets = await query<any>(
+    `SELECT t.*,
+      s.name as store_name, s.store_number as store_number
+    FROM tickets t
+    LEFT JOIN users s ON t.store_id = s.id
+    WHERE t.assigned_technician_id = ?
+    ORDER BY t.created_at DESC`,
+    [user.id]
+  )
+
+  // Format tickets to match previous structure
+  const formatTicket = (ticket: any) => ({
+    ...ticket,
+    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+    store: {
+      name: ticket.store_name,
+      store_number: ticket.store_number
+    },
+    assigned_technician: ticket.assigned_technician_name ? {
+      name: ticket.assigned_technician_name,
+      speciality: ticket.assigned_technician_speciality
+    } : null
+  })
+
+  const formattedAvailableTickets = availableTickets.map(formatTicket)
+  const formattedMyTickets = myTickets.map(formatTicket)
 
   // Calcular estatísticas
   const stats = {
-    total: myTickets?.length || 0,
-    abertos: availableTickets?.filter((t) => t.status === "aberto" && !t.assigned_technician_id).length || 0,
-    meus_em_andamento: myTickets?.filter((t) => t.status === "em_andamento").length || 0,
-    resolvidos: myTickets?.filter((t) => t.status === "resolvido").length || 0,
+    total: formattedMyTickets.length,
+    abertos: formattedAvailableTickets.filter((t) => t.status === "aberto" && !t.assigned_technician_id).length,
+    meus_em_andamento: formattedMyTickets.filter((t) => t.status === "em_andamento").length,
+    resolvidos: formattedMyTickets.filter((t) => t.status === "resolvido").length,
   }
 
   return (
@@ -71,8 +89,8 @@ export default async function TecnicoDashboard() {
 
         <div className="mt-8">
           <TechnicianTicketsBrowser
-            available={(availableTickets || []).filter((t: any) => !t.assigned_technician_id)}
-            assigned={myTickets || []}
+            available={formattedAvailableTickets.filter((t: any) => !t.assigned_technician_id)}
+            assigned={formattedMyTickets}
           />
         </div>
       </main>

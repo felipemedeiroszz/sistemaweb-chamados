@@ -1,4 +1,3 @@
-import { createServerClient } from "./supabase/server"
 import { cookies } from "next/headers"
 import { SignJWT, jwtVerify } from "jose"
 import bcrypt from "bcryptjs"
@@ -12,22 +11,29 @@ export interface User {
   user_type: "loja" | "tecnico" | "admin"
   store_number?: number
   speciality?: string
+  phone?: string
+  active?: boolean
+  created_at?: Date
+  updated_at?: Date
 }
 
+// Função separada para autenticação (usa banco de dados)
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
-  const supabase = createServerClient()
+  const { queryOne } = await import("./db")
+  
+  const user = await queryOne<any>(
+    "SELECT * FROM users WHERE email = ? AND active = true LIMIT 1",
+    [email]
+  )
 
-  const { data: user, error } = await supabase.from("users").select("*").eq("email", email).eq("active", true).single()
-
-  if (error || !user) {
-    console.log("Usuário não encontrado:", error)
+  if (!user) {
+    console.log("Usuário não encontrado")
     return null
   }
 
   const storedPassword = user.password_hash
   let isValidPassword = false
 
-  // Verifica se é um hash bcrypt (começa com $2b$, $2a$, ou $2y$)
   if (storedPassword && storedPassword.startsWith("$2")) {
     try {
       isValidPassword = await bcrypt.compare(password, storedPassword)
@@ -36,7 +42,6 @@ export async function authenticateUser(email: string, password: string): Promise
       isValidPassword = false
     }
   } else {
-    // Se não for hash bcrypt, compara como texto plano
     isValidPassword = password === storedPassword
   }
 

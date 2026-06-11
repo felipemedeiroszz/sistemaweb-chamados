@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { authenticateUser, createSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,19 +11,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica se o usuário existe e está inativo para retornar mensagem específica
-    try {
-      const supabase = createServerClient()
-      const { data: existing } = await supabase
-        .from("users")
-        .select("id, active")
-        .eq("email", email)
-        .single()
+    const existing = await queryOne<any>(
+      "SELECT id, active FROM users WHERE email = ? LIMIT 1",
+      [email]
+    )
 
-      if (existing && existing.active === false) {
-        return NextResponse.json({ error: "Acesso bloqueado. Entre em contato com o suporte." }, { status: 403 })
-      }
-    } catch (_) {
-      // Ignora erro dessa verificação e segue com autenticação padrão
+    if (existing && existing.active === 0) {
+      return NextResponse.json({ error: "Acesso bloqueado. Entre em contato com o suporte." }, { status: 403 })
     }
 
     const user = await authenticateUser(email, password)

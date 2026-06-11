@@ -16,7 +16,7 @@ import {
   AlertCircle, 
   User 
 } from "lucide-react"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
+
 
 // Shim dos hooks do React para ambientes TS onde os tipos dos hooks não são exportados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -220,25 +220,7 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Realtime: ouvir mudanças na tabela tickets e refazer o fetch
-  useEffect(() => {
-    if (!isSupabaseConfigured) return
-    const channel = supabase
-      .channel("tickets-admin")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tickets" },
-        () => {
-          // Recarregar ao inserir/atualizar/excluir
-          fetchTickets()
-        }
-      )
-      .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [fetchTickets])
 
   // Filtrar chamados conforme as abas de status e busca
   const filteredTickets = tickets

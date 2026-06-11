@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getSession } from "@/lib/auth"
+import { jwtVerify } from "jose"
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
+
+interface User {
+  id: string
+  email: string
+  name: string
+  user_type: "loja" | "tecnico" | "admin"
+  store_number?: number
+  speciality?: string
+}
+
+async function getUserFromSession(request: NextRequest): Promise<User | null> {
+  const token = request.cookies.get("session")?.value
+  
+  if (!token) {
+    return null
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload.user as User
+  } catch {
+    return null
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -13,7 +39,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Verificar se o usuário está autenticado
-  const user = await getSession()
+  const user = await getUserFromSession(request)
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url))

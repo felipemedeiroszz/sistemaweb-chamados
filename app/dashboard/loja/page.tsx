@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import { createServerClient } from "@/lib/supabase/server"
+import  { redirect }  from "next/navigation"
+import { query } from "@/lib/db"
 import DashboardHeader from "@/components/dashboard-header"
 import TicketsBrowser from "@/components/tickets-browser"
 import NewTicketButton from "@/components/new-ticket-button"
@@ -13,24 +13,33 @@ export default async function LojaDashboard() {
     redirect("/login")
   }
 
-  const supabase = createServerClient()
-
   // Buscar chamados da loja
-  const { data: tickets } = await supabase
-    .from("tickets")
-    .select(`
-      *,
-      assigned_technician:assigned_technician_id(name, speciality)
-    `)
-    .eq("store_id", user.id)
-    .order("created_at", { ascending: false })
+  const tickets = await query<any>(
+    `SELECT t.*,
+      tech.name as assigned_technician_name, tech.speciality as assigned_technician_speciality
+    FROM tickets t
+    LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+    WHERE t.store_id = ?
+    ORDER BY t.created_at DESC`,
+    [user.id]
+  )
+
+  // Format tickets to match previous structure
+  const formattedTickets = tickets.map(ticket => ({
+    ...ticket,
+    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+    assigned_technician: ticket.assigned_technician_name ? {
+      name: ticket.assigned_technician_name,
+      speciality: ticket.assigned_technician_speciality
+    } : null
+  }))
 
   // Calcular estatísticas
   const stats = {
-    total: tickets?.length || 0,
-    abertos: tickets?.filter((t) => t.status === "aberto").length || 0,
-    em_andamento: tickets?.filter((t) => t.status === "em_andamento").length || 0,
-    resolvidos: tickets?.filter((t) => t.status === "resolvido").length || 0,
+    total: formattedTickets.length,
+    abertos: formattedTickets.filter((t) => t.status === "aberto").length,
+    em_andamento: formattedTickets.filter((t) => t.status === "em_andamento").length,
+    resolvidos: formattedTickets.filter((t) => t.status === "resolvido").length,
   }
 
   return (
@@ -51,7 +60,7 @@ export default async function LojaDashboard() {
         </div>
 
         <div className="mt-6">
-          <TicketsBrowser tickets={tickets || []} userType="loja" />
+          <TicketsBrowser tickets={formattedTickets} userType="loja" />
         </div>
       </main>
     </div>

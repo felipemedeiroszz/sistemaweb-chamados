@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne, update, insert, generateUUID } from "@/lib/db"
 import { sendTicketStatusChangeSMS } from "@/lib/sms"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -17,27 +17,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Status é obrigatório" }, { status: 400 })
     }
 
-    const supabase = createServerClient()
-
     // Verificar se o chamado pertence ao técnico
-    const { data: ticket, error: fetchError } = await supabase
-      .from("tickets")
-      .select("*")
-      .eq("id", params.id)
-      .eq("assigned_technician_id", user.id)
-      .single()
+    const ticket = await queryOne<any>(
+      "SELECT * FROM tickets WHERE id = ? AND assigned_technician_id = ? LIMIT 1",
+      [params.id, user.id]
+    )
 
-    if (fetchError || !ticket) {
+    if (!ticket) {
       return NextResponse.json({ error: "Chamado não encontrado" }, { status: 404 })
     }
 
     const updateData: any = {
       status,
-      updated_at: new Date().toISOString(),
     }
 
     if (status === "resolvido") {
-      updateData.resolved_at = new Date().toISOString()
+      updateData.resolved_at = new Date()
     }
 
     // Se status for "aguardando", exigir e salvar o prazo estimado
@@ -48,16 +43,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           { status: 400 }
         )
       }
-      updateData.expected_resolution_at = expected_resolution_at
+      updateData.expected_resolution_at = new Date(expected_resolution_at)
     }
 
     // Atualizar o status do chamado
-    const { error: updateError } = await supabase.from("tickets").update(updateData).eq("id", params.id)
-
-    if (updateError) {
-      console.error("Database error:", updateError)
-      return NextResponse.json({ error: "Erro ao atualizar chamado" }, { status: 500 })
-    }
+    await update("tickets", updateData, { id: params.id })
 
     // Preparar comentário amigável com data/hora BR quando aplicável
     let historyComment = comment || `Status alterado para ${status}`
@@ -76,7 +66,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // Registrar a atualização no histórico
-    await supabase.from("ticket_updates").insert({
+    await insert("ticket_updates", {
+      id: generateUUID(),
       ticket_id: params.id,
       user_id: user.id,
       update_type: "status_change",
@@ -86,11 +77,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     // Buscar dados da loja para envio de SMS
-    const { data: storeData } = await supabase
-      .from("users")
-      .select("phone")
-      .eq("id", ticket.store_id)
-      .single()
+    const storeData = await queryOne<any>(
+      "SELECT phone FROM users WHERE id = ? LIMIT 1",
+      [ticket.store_id]
+    )
 
     // Enviar SMS de notificação se a loja tiver telefone
     if (storeData?.phone) {

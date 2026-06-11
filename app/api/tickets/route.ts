@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne, query, insert, generateUUID } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar anexos (opcionais)
-    let images: string[] | undefined = undefined
+    let imagesJson = null
     if (image_urls !== undefined) {
       if (!Array.isArray(image_urls)) {
         return NextResponse.json({ error: "image_urls deve ser um array de URLs" }, { status: 400 })
@@ -26,33 +26,35 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Máximo de 5 imagens permitido" }, { status: 400 })
       }
       // Filtra valores inválidos e garante strings
-      images = image_urls.filter((u: any) => typeof u === "string" && u.trim().length > 0).slice(0, 5)
+      const filteredImages = image_urls.filter((u: any) => typeof u === "string" && u.trim().length > 0).slice(0, 5)
+      if (filteredImages.length > 0) {
+        imagesJson = JSON.stringify(filteredImages)
+      }
     }
 
-    const supabase = createServerClient()
+    const ticketId = generateUUID()
 
-    const { data: ticket, error } = await supabase
-      .from("tickets")
-      .insert({
-        title,
-        description,
-        service_type,
-        priority: priority || "media",
-        store_id: user.id,
-        status: "aberto",
-        image_urls: images && images.length ? images : undefined,
-      })
-      .select()
-      .single()
+    await insert("tickets", {
+      id: ticketId,
+      title,
+      description,
+      service_type,
+      priority: priority || "media",
+      store_id: user.id,
+      status: "aberto",
+      image_urls: imagesJson,
+    })
 
-    if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Erro ao criar chamado" }, { status: 500 })
-    }
+    // Obter o ticket criado
+    const ticket = await queryOne<any>(
+      "SELECT * FROM tickets WHERE id = ?",
+      [ticketId]
+    )
 
     // Registrar a criação do chamado no histórico
-    await supabase.from("ticket_updates").insert({
-      ticket_id: ticket.id,
+    await insert("ticket_updates", {
+      id: generateUUID(),
+      ticket_id: ticketId,
       user_id: user.id,
       update_type: "status_change",
       new_value: "aberto",
@@ -62,6 +64,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ticket })
   } catch (error) {
     console.error("Create ticket error:", error)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+  }
+}
+
+export async function GET() {
+  try {
+    const user = await getSession()
+    if (!user) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+
+    let tickets: any[] = []
+
+    if (user.user_type === "loja") {
+      tickets = await query<any>(
+        `SELECT t.*, 
+          s.name as store_name, s.store_number,
+          tech.name as technician_name
+         FROM tickets t
+         LEFT JOIN users s ON t.store_id = s.id
+         LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+         WHERE t.store_id = ?
+         ORDER BY t.created_at DESC`,
+        [user.id]
+      )
+    } else if (user.user_type === "tecnico") {
+      tickets = await query<any>(
+        `SELECT t.*, 
+          s.name as store_name, s.store_number,
+          tech.name as technician_name
+         FROM tickets t
+         LEFT JOIN users s ON t.store_id = s.id
+         LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+         WHERE t.service_type = ?
+         ORDER BY t.created_at DESC`,
+        [user.speciality]
+      )
+    }
+
+    // Formatar tickets com image_urls parseado
+    const formattedTickets = tickets.map(ticket => ({
+      ...ticket,
+      image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+      store: {
+        name: ticket.store_name,
+        store_number: ticket.store_number
+      },
+      technician: ticket.technician_name ? { name: ticket.technician_name } : null
+    }))
+
+    return NextResponse.json({ tickets: formattedTickets })
+  } catch (error) {
+    console.error("Get tickets error:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }

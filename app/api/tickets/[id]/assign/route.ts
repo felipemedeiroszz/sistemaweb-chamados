@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne, update, insert, generateUUID } from "@/lib/db"
 import { sendTicketAssignedSMS } from "@/lib/sms"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -11,38 +11,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const supabase = createServerClient()
-
     // Verificar se o chamado existe e está disponível
-    const { data: ticket, error: fetchError } = await supabase
-      .from("tickets")
-      .select("*")
-      .eq("id", params.id)
-      .eq("service_type", user.speciality)
-      .is("assigned_technician_id", null)
-      .single()
+    const ticket = await queryOne<any>(
+      "SELECT * FROM tickets WHERE id = ? AND service_type = ? AND assigned_technician_id IS NULL LIMIT 1",
+      [params.id, user.speciality]
+    )
 
-    if (fetchError || !ticket) {
+    if (!ticket) {
       return NextResponse.json({ error: "Chamado não encontrado ou não disponível" }, { status: 404 })
     }
 
     // Atribuir o chamado ao técnico
-    const { error: updateError } = await supabase
-      .from("tickets")
-      .update({
-        assigned_technician_id: user.id,
-        status: "em_andamento",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-
-    if (updateError) {
-      console.error("Database error:", updateError)
-      return NextResponse.json({ error: "Erro ao assumir chamado" }, { status: 500 })
-    }
+    await update("tickets", {
+      assigned_technician_id: user.id,
+      status: "em_andamento",
+    }, { id: params.id })
 
     // Registrar a atribuição no histórico
-    await supabase.from("ticket_updates").insert({
+    await insert("ticket_updates", {
+      id: generateUUID(),
       ticket_id: params.id,
       user_id: user.id,
       update_type: "assignment",
@@ -51,11 +38,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     })
 
     // Buscar dados da loja para envio de SMS
-    const { data: storeData } = await supabase
-      .from("users")
-      .select("phone")
-      .eq("id", ticket.store_id)
-      .single()
+    const storeData = await queryOne<any>(
+      "SELECT phone FROM users WHERE id = ? LIMIT 1",
+      [ticket.store_id]
+    )
 
     // Enviar SMS de notificação se a loja tiver telefone
     if (storeData?.phone) {

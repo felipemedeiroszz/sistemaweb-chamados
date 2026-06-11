@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { query, queryOne, insert, update, deleteRow, generateUUID } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 // GET /api/users - list users (admin only)
@@ -11,18 +11,11 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const supabase = createServerClient()
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
-      .order("created_at", { ascending: false })
+    const users = await query<any>(
+      "SELECT id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at FROM users ORDER BY created_at DESC"
+    )
 
-    if (error) {
-      console.error("Erro ao listar usuários:", error)
-      return NextResponse.json({ error: "Erro ao listar usuários" }, { status: 500 })
-    }
-
-    return NextResponse.json({ users: data || [] })
+    return NextResponse.json({ users })
   } catch (e) {
     console.error("Users GET error:", e)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
@@ -53,12 +46,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campos obrigatórios: email, password, name, user_type" }, { status: 400 })
     }
 
-    const supabase = createServerClient()
-
     // hash password
     const password_hash = await bcrypt.hash(password, 10)
+    const userId = generateUUID()
 
     const insertPayload: any = {
+      id: userId,
       email,
       password_hash,
       name,
@@ -70,18 +63,15 @@ export async function POST(request: NextRequest) {
     if (speciality !== undefined) insertPayload.speciality = speciality
     if (phone !== undefined) insertPayload.phone = phone
 
-    const { data, error } = await supabase
-      .from("users")
-      .insert(insertPayload)
-      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
-      .single()
+    await insert("users", insertPayload)
 
-    if (error) {
-      console.error("Erro ao criar usuário:", error)
-      return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 })
-    }
+    // Obter o usuário criado
+    const user = await queryOne<any>(
+      "SELECT id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at FROM users WHERE id = ?",
+      [userId]
+    )
 
-    return NextResponse.json({ user: data })
+    return NextResponse.json({ user })
   } catch (e) {
     console.error("Users POST error:", e)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { createServerClient } from "@/lib/supabase/server"
+import { query, queryOne } from "@/lib/db"
 import { notFound } from "next/navigation"
 import DashboardHeader from "@/components/dashboard-header"
 import TicketDetails from "@/components/ticket-details"
@@ -15,21 +15,37 @@ export default async function TicketPage({ params }: { params: { id: string } })
     redirect("/login")
   }
 
-  const supabase = createServerClient()
-
   // Buscar detalhes do chamado
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select(`
-      *,
-      store:users!store_id(name, store_number, email),
-      assigned_technician:users!assigned_technician_id(name, speciality, email)
-    `)
-    .eq("id", params.id)
-    .single()
+  const ticket = await queryOne<any>(
+    `SELECT t.*,
+      s.name as store_name, s.store_number as store_number, s.email as store_email,
+      tech.name as assigned_technician_name, tech.speciality as assigned_technician_speciality, tech.email as assigned_technician_email
+    FROM tickets t
+    LEFT JOIN users s ON t.store_id = s.id
+    LEFT JOIN users tech ON t.assigned_technician_id = tech.id
+    WHERE t.id = ?
+    LIMIT 1`,
+    [params.id]
+  )
 
-  if (error || !ticket) {
+  if (!ticket) {
     notFound()
+  }
+
+  // Format ticket to match previous structure
+  const formattedTicket = {
+    ...ticket,
+    image_urls: ticket.image_urls ? JSON.parse(ticket.image_urls) : null,
+    store: {
+      name: ticket.store_name,
+      store_number: ticket.store_number,
+      email: ticket.store_email
+    },
+    assigned_technician: ticket.assigned_technician_name ? {
+      name: ticket.assigned_technician_name,
+      speciality: ticket.assigned_technician_speciality,
+      email: ticket.assigned_technician_email
+    } : null
   }
 
   // Verificar permissões
@@ -44,14 +60,23 @@ export default async function TicketPage({ params }: { params: { id: string } })
   }
 
   // Buscar histórico do chamado
-  const { data: history } = await supabase
-    .from("ticket_updates")
-    .select(`
-      *,
-      user:user_id(name, user_type)
-    `)
-    .eq("ticket_id", params.id)
-    .order("created_at", { ascending: true })
+  const history = await query<any>(
+    `SELECT tu.*, u.name as user_name, u.user_type as user_user_type
+    FROM ticket_updates tu
+    LEFT JOIN users u ON tu.user_id = u.id
+    WHERE tu.ticket_id = ?
+    ORDER BY tu.created_at ASC`,
+    [params.id]
+  )
+
+  // Format history to match previous structure
+  const formattedHistory = history.map(h => ({
+    ...h,
+    user: {
+      name: h.user_name,
+      user_type: h.user_user_type
+    }
+  }))
 
   // O usuário é garantido após os redirecionamentos acima
   const userType = user!.user_type as "admin" | "loja" | "tecnico"
@@ -70,8 +95,8 @@ export default async function TicketPage({ params }: { params: { id: string } })
               <Button variant="outline">← Voltar ao Dashboard</Button>
             </Link>
           </div>
-          <TicketDetails ticket={ticket} user={user} />
-          <TicketHistory history={history || []} />
+          <TicketDetails ticket={formattedTicket} user={user} />
+          <TicketHistory history={formattedHistory} />
         </div>
       </main>
     </div>

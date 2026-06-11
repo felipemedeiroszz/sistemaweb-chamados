@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne, update, insert, generateUUID } from "@/lib/db"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -10,38 +10,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const supabase = createServerClient()
-
     // Verificar se o chamado pertence à loja e está resolvido
-    const { data: ticket, error: fetchError } = await supabase
-      .from("tickets")
-      .select("*")
-      .eq("id", params.id)
-      .eq("store_id", user.id)
-      .eq("status", "resolvido")
-      .single()
+    const ticket = await queryOne<any>(
+      "SELECT * FROM tickets WHERE id = ? AND store_id = ? AND status = 'resolvido' LIMIT 1",
+      [params.id, user.id]
+    )
 
-    if (fetchError || !ticket) {
+    if (!ticket) {
       return NextResponse.json({ error: "Chamado não encontrado ou não pode ser fechado" }, { status: 404 })
     }
 
     // Fechar o chamado
-    const { error: updateError } = await supabase
-      .from("tickets")
-      .update({
-        status: "fechado",
-        closed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-
-    if (updateError) {
-      console.error("Database error:", updateError)
-      return NextResponse.json({ error: "Erro ao fechar chamado" }, { status: 500 })
-    }
+    await update("tickets", {
+      status: "fechado",
+      closed_at: new Date(),
+    }, { id: params.id })
 
     // Registrar o fechamento no histórico
-    await supabase.from("ticket_updates").insert({
+    await insert("ticket_updates", {
+      id: generateUUID(),
       ticket_id: params.id,
       user_id: user.id,
       update_type: "status_change",

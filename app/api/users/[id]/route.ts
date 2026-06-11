@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { getSession } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
+import { queryOne, update, deleteRow } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 // PATCH /api/users/[id] - update user (admin only)
@@ -24,8 +24,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       active,
     } = body || {}
 
-    const supabase = createServerClient()
-
     const updatePayload: any = {}
     if (email !== undefined) updatePayload.email = email
     if (name !== undefined) updatePayload.name = name
@@ -39,19 +37,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       updatePayload.password_hash = await bcrypt.hash(password, 10)
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .update(updatePayload)
-      .eq("id", id)
-      .select("id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at")
-      .single()
+    await update("users", updatePayload, { id })
 
-    if (error) {
-      console.error("Erro ao atualizar usuário:", error)
-      return NextResponse.json({ error: "Erro ao atualizar usuário" }, { status: 500 })
-    }
+    // Obter o usuário atualizado
+    const user = await queryOne<any>(
+      "SELECT id, email, name, user_type, store_number, speciality, phone, active, created_at, updated_at FROM users WHERE id = ?",
+      [id]
+    )
 
-    return NextResponse.json({ user: data })
+    return NextResponse.json({ user })
   } catch (e) {
     console.error("Users PATCH error:", e)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
@@ -67,18 +61,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
     }
 
     const { id } = params
-    const supabase = createServerClient()
-
-    const { error } = await supabase
-      .from("users")
-      .delete()
-      .eq("id", id)
-      .single()
-
-    if (error) {
-      console.error("Erro ao excluir usuário:", error)
-      return NextResponse.json({ error: "Erro ao excluir usuário" }, { status: 500 })
-    }
+    await deleteRow("users", { id })
 
     return new NextResponse(null, { status: 204 })
   } catch (e) {
