@@ -103,12 +103,10 @@ CREATE TABLE IF NOT EXISTS checklists (
   is_recurring BOOLEAN DEFAULT false,
   recurring_day_of_week INT DEFAULT NULL,
   recurring_time TIME DEFAULT NULL,
-  created_by CHAR(36) NOT NULL,
+  created_by CHAR(36),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  active BOOLEAN DEFAULT true,
-  FOREIGN KEY (store_id) REFERENCES users(id),
-  FOREIGN KEY (created_by) REFERENCES users(id)
+  active BOOLEAN DEFAULT true
 );
 
 -- Índices para melhor performance
@@ -124,8 +122,7 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   requires_photo BOOLEAN DEFAULT false,
   order_index INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Índices para melhor performance
@@ -136,12 +133,9 @@ CREATE TABLE IF NOT EXISTS checklist_executions (
   id CHAR(36) PRIMARY KEY DEFAULT UUID(),
   checklist_id CHAR(36) NOT NULL,
   store_id CHAR(36) NOT NULL,
-  executed_by CHAR(36) NOT NULL,
+  executed_by CHAR(36),
   executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  due_date DATE NOT NULL,
-  FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE,
-  FOREIGN KEY (store_id) REFERENCES users(id),
-  FOREIGN KEY (executed_by) REFERENCES users(id)
+  due_date DATE NOT NULL
 );
 
 -- Índices para melhor performance
@@ -158,10 +152,7 @@ CREATE TABLE IF NOT EXISTS checklist_item_responses (
   photo_url TEXT DEFAULT NULL,
   notes TEXT DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (execution_id) REFERENCES checklist_executions(id) ON DELETE CASCADE,
-  FOREIGN KEY (item_id) REFERENCES checklist_items(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_execution_item (execution_id, item_id)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Índices para melhor performance

@@ -37,15 +37,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Você não tem acesso a esta execução" }, { status: 403 })
     }
 
+    // Buscar todos os itens do checklist para garantir que temos todos
+    const allItems = await query<any>(`
+      SELECT * FROM checklist_items WHERE checklist_id = ?
+    `, [execution.checklist_id])
+
     // Validar cada resposta
     for (const resp of responses) {
       if (!resp.item_id) continue
 
       // Verificar se o item pertence ao checklist da execução
-      const item = await queryOne<any>(`
-        SELECT * FROM checklist_items WHERE id = ? AND checklist_id = ?
-      `, [resp.item_id, execution.checklist_id])
-
+      const item = allItems.find(i => i.id === resp.item_id)
       if (!item) {
         return NextResponse.json({ 
           error: `Item ${resp.item_id} não pertence a este checklist` 
@@ -85,6 +87,38 @@ export async function PATCH(
           notes: resp.notes || null,
         })
       }
+    }
+
+    // Verificar se TODOS os itens foram marcados como concluídos
+    const updatedResponses = await query<any>(`
+      SELECT r.*, i.requires_photo as item_requires_photo
+      FROM checklist_item_responses r
+      JOIN checklist_items i ON r.item_id = i.id
+      WHERE r.execution_id = ?
+    `, [id])
+
+    const allItemsWithResponses = allItems.map(item => {
+      const response = updatedResponses.find(r => r.item_id === item.id)
+      return {
+        ...item,
+        response
+      }
+    })
+
+    // Verificar se todos os itens têm respostas e estão concluídos
+    const allItemsCompleted = allItemsWithResponses.every(itemWithResp => {
+      if (!itemWithResp.response) return false
+      if (!itemWithResp.response.completed) return false
+      if (itemWithResp.requires_photo && !itemWithResp.response.photo_url) return false
+      return true
+    })
+
+    // Atualizar executed_at apenas se todos os itens estiverem concluídos
+    if (allItemsCompleted && !execution.executed_at) {
+      await update("checklist_executions", {
+        executed_by: user.id,
+        executed_at: new Date()
+      }, { id })
     }
 
     // Buscar execução atualizada

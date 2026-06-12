@@ -25,12 +25,34 @@ export function getConnectionPool() {
   return pool
 }
 
+// Lista de campos que devem ser booleanos
+const BOOLEAN_FIELDS = [
+  'is_recurring', 'active', 'requires_photo', 
+  'completed', 'solved'
+]
+
+function convertToBooleanFields(rows: any[]): any[] {
+  return rows.map(row => {
+    const newRow = { ...row }
+    for (const field of BOOLEAN_FIELDS) {
+      if (newRow[field] !== undefined && newRow[field] !== null) {
+        newRow[field] = !!newRow[field]
+      }
+    }
+    return newRow
+  })
+}
+
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   try {
     const pool = getConnectionPool()
-    const sanitizedParams = params.map(p => p === undefined ? null : p)
+    const sanitizedParams = params.map(p => {
+      if (p === undefined) return null
+      if (typeof p === 'boolean') return p ? 1 : 0
+      return p
+    })
     const [rows] = await pool.execute(sql, sanitizedParams)
-    return rows as T[]
+    return convertToBooleanFields(rows) as T[]
   } catch (error) {
     console.error("Erro na consulta SQL:", error)
     console.error("SQL:", sql)
@@ -46,7 +68,11 @@ export async function queryOne<T = any>(sql: string, params: any[] = []): Promis
 
 export async function insert(table: string, data: Record<string, any>): Promise<string> {
   const keys = Object.keys(data)
-  const values = Object.values(data).map(p => p === undefined ? null : p)
+  const values = Object.values(data).map(p => {
+    if (p === undefined) return null
+    if (typeof p === 'boolean') return p ? 1 : 0
+    return p
+  })
   const placeholders = keys.map(() => "?").join(", ")
 
   const sql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`
@@ -61,7 +87,17 @@ export async function insert(table: string, data: Record<string, any>): Promise<
 export async function update(table: string, data: Record<string, any>, where: Record<string, any>): Promise<void> {
   const setClauses = Object.keys(data).map(key => `${key} = ?`).join(", ")
   const whereClauses = Object.keys(where).map(key => `${key} = ?`).join(" AND ")
-  const values = [...Object.values(data), ...Object.values(where)].map(p => p === undefined ? null : p)
+  
+  const sanitizeValue = (p: any) => {
+    if (p === undefined) return null
+    if (typeof p === 'boolean') return p ? 1 : 0
+    return p
+  }
+  
+  const values = [
+    ...Object.values(data).map(sanitizeValue), 
+    ...Object.values(where).map(sanitizeValue)
+  ]
 
   const sql = `UPDATE ${table} SET ${setClauses} WHERE ${whereClauses}`
   const pool = getConnectionPool()
@@ -70,7 +106,11 @@ export async function update(table: string, data: Record<string, any>, where: Re
 
 export async function deleteRow(table: string, where: Record<string, any>): Promise<void> {
   const whereClauses = Object.keys(where).map(key => `${key} = ?`).join(" AND ")
-  const values = Object.values(where).map(p => p === undefined ? null : p)
+  const values = Object.values(where).map(p => {
+    if (p === undefined) return null
+    if (typeof p === 'boolean') return p ? 1 : 0
+    return p
+  })
 
   const sql = `DELETE FROM ${table} WHERE ${whereClauses}`
   const pool = getConnectionPool()

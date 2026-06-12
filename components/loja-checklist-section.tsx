@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { CheckCircle, Circle, Camera, ChevronDown, ChevronUp, ListChecks } from "lucide-react"
+import { CheckCircle, Circle, Camera, ChevronDown, ChevronUp, ListChecks, Clock, AlertCircle } from "lucide-react"
 
 interface ChecklistItem {
   id: string
@@ -25,6 +25,10 @@ interface Checklist {
   recurring_time: string | null
   items: ChecklistItem[]
   created_at: string
+  status: 'concluido' | 'pendente' | 'atrasado'
+  due_date?: string
+  executed_at?: string
+  latest_execution?: any
 }
 
 interface ChecklistExecution {
@@ -46,9 +50,45 @@ interface ResponseData {
   notes: string
 }
 
+// Função para formatar data
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('pt-BR', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Componente para status
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'concluido':
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <CheckCircle className="mr-1 h-3 w-3" /> Concluído
+        </Badge>
+      )
+    case 'atrasado':
+      return (
+        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <AlertCircle className="mr-1 h-3 w-3" /> Atrasado
+        </Badge>
+      )
+    case 'pendente':
+    default:
+      return (
+        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Clock className="mr-1 h-3 w-3" /> Pendente
+        </Badge>
+      )
+  }
+}
+
 export default function LojaChecklistSection() {
   const [checklists, setChecklists] = React.useState<Checklist[]>([])
-  const [executions, setExecutions] = React.useState<ChecklistExecution[]>([])
   const [loading, setLoading] = React.useState(true)
   const [activeExecution, setActiveExecution] = React.useState<ChecklistExecution | null>(null)
   const [selectedChecklist, setSelectedChecklist] = React.useState<Checklist | null>(null)
@@ -60,19 +100,11 @@ export default function LojaChecklistSection() {
 
   const fetchData = React.useCallback(async () => {
     try {
-      const [checklistsRes, executionsRes] = await Promise.all([
-        fetch("/api/checklists"),
-        fetch("/api/checklists/executions"),
-      ])
-
+      const checklistsRes = await fetch("/api/checklists")
+      
       if (checklistsRes.ok) {
         const data = await checklistsRes.json()
         setChecklists(data.checklists || [])
-      }
-
-      if (executionsRes.ok) {
-        const data = await executionsRes.json()
-        setExecutions(data.executions || [])
       }
     } catch (e) {
       console.error("Erro ao carregar checklists", e)
@@ -87,18 +119,22 @@ export default function LojaChecklistSection() {
 
   // Inicializar respostas quando uma execução é aberta
   React.useEffect(() => {
-    if (activeExecution) {
+    if (activeExecution && selectedChecklist) {
       const initialResponses: Record<string, ResponseData> = {}
-      activeExecution.responses.forEach((resp) => {
-        initialResponses[resp.item_id] = {
-          completed: resp.completed,
-          photo_url: resp.photo_url || "",
-          notes: resp.notes || "",
+      
+      // Inicializar resposta para CADA item do checklist
+      selectedChecklist.items.forEach(item => {
+        const existingResponse = activeExecution.responses.find((r: any) => r.item_id === item.id)
+        initialResponses[item.id] = {
+          completed: existingResponse?.completed || false,
+          photo_url: existingResponse?.photo_url || '',
+          notes: existingResponse?.notes || '',
         }
       })
+      
       setExecutionResponses(initialResponses)
     }
-  }, [activeExecution])
+  }, [activeExecution, selectedChecklist])
 
   const toggleItemExpanded = (itemId: string) => {
     setExpandedItems((prev) => ({
@@ -107,31 +143,52 @@ export default function LojaChecklistSection() {
     }))
   }
 
-  const handleStartExecution = async (checklistId: string) => {
-    const checklist = checklists.find((c) => c.id === checklistId)
-    if (!checklist) return
-
-    const today = new Date().toISOString().split("T")[0]
-
-    try {
-      const res = await fetch("/api/checklists/executions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          checklist_id: checklistId,
-          due_date: today,
-          responses: [],
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setActiveExecution(data.execution)
-        setSelectedChecklist(checklist)
-        await fetchData()
+  const handleStartExecution = async (checklist: Checklist) => {
+    setSelectedChecklist(checklist)
+    
+    if (checklist.latest_execution) {
+      // Se já tem uma execução recente, abri-la para edição
+      setActiveExecution(checklist.latest_execution)
+    } else {
+      // Criar nova execução
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        let dueDate = today
+        
+        // Se for recorrente, calcular o prazo correto
+        if (checklist.is_recurring && checklist.recurring_day_of_week !== null) {
+          const now = new Date()
+          const due = new Date(now)
+          
+          while (due.getDay() !== checklist.recurring_day_of_week) {
+            due.setDate(due.getDate() + 1)
+          }
+          
+          if (checklist.recurring_time) {
+            const [hours, minutes] = checklist.recurring_time.split(':').map(Number)
+            due.setHours(hours, minutes, 0, 0)
+          }
+          
+          dueDate = due.toISOString().split('T')[0]
+        }
+        
+        const res = await fetch("/api/checklists/executions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            checklist_id: checklist.id,
+            due_date: dueDate,
+            responses: []
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          setActiveExecution(data.execution)
+        }
+      } catch (e) {
+        console.error("Erro ao iniciar execução", e)
       }
-    } catch (e) {
-      console.error("Erro ao iniciar execução", e)
     }
   }
 
@@ -156,18 +213,13 @@ export default function LojaChecklistSection() {
       if (res.ok) {
         setActiveExecution(null)
         setExecutionResponses({})
-        await fetchData()
+        await fetchData() // Recarregar para atualizar status
       }
     } catch (e) {
       console.error("Erro ao salvar execução", e)
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const getExecutionForChecklist = (checklistId: string): ChecklistExecution | undefined => {
-    const today = new Date().toISOString().split("T")[0]
-    return executions.find((e) => e.checklist_id === checklistId && e.due_date === today)
   }
 
   const isItemCompleted = (itemId: string): boolean => {
@@ -225,46 +277,62 @@ export default function LojaChecklistSection() {
   return (
     <div className="space-y-4">
       {checklists.map((checklist) => {
-        const execution = getExecutionForChecklist(checklist.id)
-        const isCompleted = execution?.responses?.every((r) => r.completed) ?? false
-
+        const isCompleted = checklist.status === 'concluido'
+        
         return (
-          <Card key={checklist.id} className={isCompleted ? "border-green-200 bg-green-50" : ""}>
+          <Card key={checklist.id} className={
+            checklist.status === 'atrasado' ? 'border-red-200 bg-red-50' : 
+            checklist.status === 'concluido' ? 'border-green-200 bg-green-50' : ''
+          }>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <CardTitle className="text-lg">{checklist.name}</CardTitle>
-                  {isCompleted && (
-                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                      <CheckCircle className="mr-1 h-3 w-3" /> Concluído
-                    </Badge>
-                  )}
+                  <StatusBadge status={checklist.status} />
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => {
-                    if (execution) {
-                      setActiveExecution(execution)
-                      setSelectedChecklist(checklist)
-                    } else {
-                      handleStartExecution(checklist.id)
-                    }
-                  }}
+                  onClick={() => handleStartExecution(checklist)}
                   variant={isCompleted ? "outline" : "default"}
                 >
-                  {execution ? "Ver/Editar" : "Iniciar"}
+                  {isCompleted ? "Ver" : "Preencher"}
                 </Button>
               </div>
-              {checklist.is_recurring && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Recorrente: {getDayName(checklist.recurring_day_of_week)} às {checklist.recurring_time}
-                </p>
-              )}
+              
+              {/* Informações de data */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                {checklist.is_recurring && checklist.recurring_day_of_week !== null && (
+                  <div className="flex items-center">
+                    <Clock className="mr-1 h-4 w-4" />
+                    {(() => {
+                      const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+                      return `${days[checklist.recurring_day_of_week]}${checklist.recurring_time ? ` às ${checklist.recurring_time}` : ''}`
+                    })()}
+                  </div>
+                )}
+                
+                {checklist.due_date && checklist.status !== 'concluido' && (
+                  <div className="flex items-center">
+                    <Clock className="mr-1 h-4 w-4" />
+                    Prazo: {formatDate(checklist.due_date)}
+                  </div>
+                )}
+                
+                {checklist.executed_at && checklist.status === 'concluido' && (
+                  <div className="flex items-center text-green-700">
+                    <CheckCircle className="mr-1 h-4 w-4" />
+                    Concluído em: {formatDate(checklist.executed_at)}
+                  </div>
+                )}
+              </div>
             </CardHeader>
+            
             <CardContent>
               <div className="space-y-2">
                 {checklist.items.map((item, index) => {
-                  const itemResponse = execution?.responses?.find((r) => r.item_id === item.id)
+                  const itemResponse = checklist.latest_execution?.responses?.find((r: any) => r.item_id === item.id)
+                  const itemCompleted = itemResponse?.completed ?? false
+                  
                   return (
                     <div
                       key={item.id}
@@ -272,7 +340,7 @@ export default function LojaChecklistSection() {
                       onClick={() => toggleItemExpanded(item.id)}
                     >
                       <div className="mt-0.5">
-                        {itemResponse?.completed ? (
+                        {itemCompleted ? (
                           <CheckCircle className="h-5 w-5 text-green-600" />
                         ) : (
                           <Circle className="h-5 w-5 text-gray-400" />
@@ -412,10 +480,4 @@ export default function LojaChecklistSection() {
       </Dialog>
     </div>
   )
-}
-
-function getDayName(dayOfWeek: number | null): string {
-  if (dayOfWeek === null) return ""
-  const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"]
-  return days[dayOfWeek] || ""
 }
