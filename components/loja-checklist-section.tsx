@@ -97,6 +97,8 @@ export default function LojaChecklistSection() {
   const [photoModalOpen, setPhotoModalOpen] = React.useState(false)
   const [currentPhotoItem, setCurrentPhotoItem] = React.useState<string | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
+  const [imageViewerOpen, setImageViewerOpen] = React.useState(false)
+  const [currentImageUrl, setCurrentImageUrl] = React.useState<string>('')
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -364,10 +366,33 @@ export default function LojaChecklistSection() {
                             )}
                           </div>
                         </div>
-                        {expandedItems[item.id] && item.description && (
-                          <p className="text-sm text-gray-600 mt-1 pl-7">
-                            {item.description}
-                          </p>
+                        {expandedItems[item.id] && (
+                          <div className="mt-1 pl-7 space-y-2">
+                            {item.description && (
+                              <p className="text-sm text-gray-600">{item.description}</p>
+                            )}
+                            {itemResponse?.photo_url && (
+                              <div className="mt-2">
+                                <img
+                                  src={itemResponse.photo_url}
+                                  alt="Foto do item"
+                                  className="w-full max-w-xs rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentImageUrl(itemResponse.photo_url)
+                                    setImageViewerOpen(true)
+                                  }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    target.style.display = 'none'
+                                  }}
+                                />
+                              </div>
+                            )}
+                            {itemResponse?.notes && (
+                              <p className="text-sm text-gray-500">{itemResponse.notes}</p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -426,7 +451,22 @@ export default function LojaChecklistSection() {
                           {response.photo_url ? "Alterar foto" : "Adicionar foto"}
                         </Button>
                         {response.photo_url && (
-                          <p className="text-xs text-green-600 mt-1">Foto adicionada</p>
+                          <div className="mt-2">
+                            <img
+                              src={response.photo_url}
+                              alt="Foto do item"
+                              className="w-full max-w-xs rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCurrentImageUrl(response.photo_url)
+                                setImageViewerOpen(true)
+                              }}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                              }}
+                            />
+                          </div>
                         )}
                       </div>
                     )}
@@ -472,9 +512,43 @@ export default function LojaChecklistSection() {
                 }
               }}
             />
+            {currentPhotoItem && executionResponses[currentPhotoItem]?.photo_url && (
+              <img
+                src={executionResponses[currentPhotoItem].photo_url}
+                alt="Pré-visualização"
+                className="w-full max-w-md mx-auto rounded-md border"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                }}
+              />
+            )}
           </div>
           <DialogFooter>
             <Button onClick={() => setPhotoModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Visualização de Imagem */}
+      <Dialog open={imageViewerOpen} onOpenChange={setImageViewerOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Visualizar Foto</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center p-4">
+            <img
+              src={currentImageUrl}
+              alt="Visualização da foto"
+              className="max-w-full max-h-[70vh] rounded-md object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setImageViewerOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
